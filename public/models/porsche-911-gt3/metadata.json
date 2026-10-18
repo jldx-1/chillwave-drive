@@ -1,0 +1,9 @@
+{
+  "author": "ChevroletSS (https://sketchfab.com/ChevroletSS)",
+  "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+  "source": "https://sketchfab.com/3d-models/porsche-911-gt3-78d5c47ab2554c2592b7e499179a0792",
+  "title": "Porsche 911 GT3",
+  "downloadUrl": "https://raw.githubusercontent.com/pedrosoandre/carros/main/assets/porsche-911-gt3.glb",
+  "sha256": "4058dc7aa3c2ad27f230c1ac77fe4bc253930aeacffeab48371360c557456718",
+  "adaptations": "Meshopt-compressed and simplified by pedrosoandre/carros. Chillwave Drive normalizes scale/orientation, adds cyan PBR paint, tunes materials/lights, rigs wheels/steering/wipers, and adds live instruments/mirrors."
+}

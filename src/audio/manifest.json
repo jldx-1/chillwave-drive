@@ -1,0 +1,19 @@
+{
+  "bpm": 72,
+  "beats": 32,
+  "sampleRate": 24000,
+  "frames": 640000,
+  "duration": 26.666666666666668,
+  "stems": [
+    "atmosphere",
+    "bass",
+    "melody",
+    "lift"
+  ],
+  "tracks": {
+    "chillwave": "Sunset Circuit",
+    "vaporwave": "Afterimage Avenue"
+  },
+  "license": "MIT",
+  "generator": "tools/generate_soundtrack.py"
+}
