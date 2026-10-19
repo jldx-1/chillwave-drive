@@ -12,14 +12,17 @@ export interface Agent extends HitBox {
 }
 const capacities = { low: 24, normal: 44, high: 62, dense: 80 };
 const masses = { sedan: 1600, suv: 2200, van: 2600, truck: 9500, sport: 1450, police: 1900 };
+// Pursuit units need a speed reserve above the player's 78 m/s highway limit.
+const pursuitSpeed = 94;
 export class Traffic {
   agents: Agent[] = [];
   level = 0; capture = 0; nearMisses = 0; collisions = 0; pressure = 0; joins = 0;
   private random: Random; private serial = 0;
   private contacts = new Map<string, number>();
+  private passing = new Map<number, { blocker: number; lane: number }>();
   constructor(seed: string, readonly density: Density = 'normal') { this.random = new Random(hashSeed(seed)); }
   reset(): void {
-    this.agents = []; this.level = 0; this.capture = 0; this.nearMisses = 0; this.collisions = 0; this.pressure = 0; this.joins = 0; this.contacts.clear();
+    this.agents = []; this.level = 0; this.capture = 0; this.nearMisses = 0; this.collisions = 0; this.pressure = 0; this.joins = 0; this.contacts.clear(); this.passing.clear();
     for (let i = 0; i < capacities[this.density]; i++) this.spawn(0, i, true);
   }
   private spawn(playerS: number, index: number, initial = false): void {
@@ -29,10 +32,10 @@ export class Traffic {
     let s = playerS + (initial ? (police && index === 1 ? 72 : 130 + index * 17) : 800 + r.range(0, 220));
     while (this.agents.some(a => a.direction === direction && a.lane === lane && Math.abs(a.s - s) < 38)) s += 40;
     const kind = police ? 'police' : (['sedan', 'suv', 'van', 'sport', 'truck'] as const)[Math.floor(r.next() * 5)];
-    const desired = police ? 18 : r.range(kind === 'truck' ? 20 : 24, kind === 'sport' ? 42 : 34);
+    const desired = police ? 22 : r.range(kind === 'truck' ? 20 : 24, kind === 'sport' ? 42 : 34);
     this.agents.push({ id: this.serial++, x, oldX: x, s, oldS: s, width: kind === 'truck' ? 2.5 : police ? POLICE_SIZE.width : 1.95,
       length: kind === 'truck' ? 9 : kind === 'van' ? 5.5 : police ? POLICE_SIZE.length : 4.6, kind, direction, lane,
-      speed: police ? 14 : r.range(18, 30), desired, targetX: x, cooldown: r.range(1, 7),
+      speed: police ? 20 : r.range(18, 30), desired, targetX: x, cooldown: r.range(1, 7),
       state: 'patrolling', route: 'main', near: false, impact: 0, active: false, yaw: direction === 1 ? 0 : Math.PI,
       lateral: 0, spin: 0, damage: 0, pursuitTime: 0 });
   }
@@ -56,22 +59,35 @@ export class Traffic {
       if (police) {
         a.pursuitTime += dt;
         if (a.impact > 0) { a.state = 'recovering'; targetSpeed = Math.max(8, player.speed * .8); }
-        else if (gap > 380) { a.state = 'searching'; targetSpeed = Math.min(78, player.speed + 14); }
-        else if (gap > 200) { a.state = 'rejoining'; targetSpeed = Math.min(78, player.speed + 11); }
-        else if (gap > 26) { a.state = 'closing'; targetSpeed = Math.min(77, Math.max(24, player.speed + 4 + this.level)); }
-        else { a.state = this.level >= 4 ? 'flanking' : 'following'; targetSpeed = Math.max(0, player.speed + (gap - 9) * .65); }
+        else if (gap > 380) { a.state = 'searching'; targetSpeed = Math.min(pursuitSpeed, Math.max(32, player.speed + 16)); }
+        else if (gap > 200) { a.state = 'rejoining'; targetSpeed = Math.min(pursuitSpeed, Math.max(30, player.speed + 14)); }
+        else {
+          a.state = gap > 26 ? 'closing' : this.level >= 4 ? 'flanking' : 'following';
+          // Ease down before reaching the player; leave extra braking room at highway speed.
+          const followingGap = 10 + Math.max(0, player.speed) * .22;
+          targetSpeed = clamp(player.speed + (gap - followingGap) * .5, 0, pursuitSpeed);
+        }
         const branch = road.branchCenter(a.s);
         a.route = player.x > 16 && branch !== undefined ? 'detour' : 'main';
-        if (a.route === 'detour') a.targetX = branch!;
+        if (a.route === 'detour') { a.targetX = branch!; this.passing.delete(a.id); }
         else {
-          const desiredX = player.x + (a.state === 'flanking' ? (a.id % 2 ? 2.8 : -2.8) : 0);
-          const nextLane = LANES.reduce((best, x, i) => Math.abs(x - desiredX) < Math.abs(LANES[best] - desiredX) ? i : best, 0);
-          if (this.laneSafe(a, nextLane)) { a.lane = nextLane; a.targetX = LANES[nextLane]; }
+          const pass = this.passing.get(a.id);
+          const blocker = pass && this.agents.find(b => b.id === pass.blocker);
+          // Hold the free lane until the whole SUV has passed, instead of chasing
+          // the player's lane again on the very next frame.
+          if (pass && (!blocker || a.s - blocker.s > (a.length + blocker.length) / 2 + Math.max(18, a.speed * .4))) this.passing.delete(a.id);
+          const maneuver = this.passing.get(a.id);
+          if (maneuver) { a.lane = maneuver.lane; a.targetX = LANES[maneuver.lane]; a.state = 'changing lanes'; }
+          else {
+            const desiredX = player.x + (a.state === 'flanking' ? (a.id % 2 ? 2.8 : -2.8) : 0);
+            const nextLane = LANES.reduce((best, x, i) => Math.abs(x - desiredX) < Math.abs(LANES[best] - desiredX) ? i : best, 0);
+            if (a.cooldown <= 0 && this.laneSafe(a, nextLane)) { a.lane = nextLane; a.targetX = LANES[nextLane]; }
+          }
         }
       } else a.state = a.impact > 0 ? 'recovering' : 'patrolling';
       let front: Agent | undefined, frontGap = Infinity;
       for (const b of this.agents) {
-        if (a === b || b.direction !== a.direction || Math.abs(a.x - b.x) > 2.7) continue;
+        if (a === b || b.direction !== a.direction || (Math.abs(a.x - b.x) > 2.7 && (!police || Math.abs(a.targetX - b.x) > 2.7))) continue;
         const spacing = (b.s - a.s) * a.direction - (a.length + b.length) / 2;
         if (spacing >= -1 && spacing < frontGap) { frontGap = spacing; front = b; }
       }
@@ -80,7 +96,10 @@ export class Traffic {
         if (police) a.state = 'avoiding';
         if (a.cooldown <= 0 && a.route === 'main' && a.impact <= 0) {
           const alternatives = [a.lane - 1, a.lane + 1].filter(l => l >= 0 && l < 4 && this.laneSafe(a, l));
-          if (alternatives.length) { a.lane = alternatives[0]; a.targetX = (a.direction === 1 ? LANES : ONCOMING)[a.lane]; a.cooldown = 6; if (police) a.state = 'changing lanes'; }
+          if (alternatives.length) {
+            a.lane = alternatives[0]; a.targetX = (a.direction === 1 ? LANES : ONCOMING)[a.lane]; a.cooldown = police ? 1.5 : 6;
+            if (police) { this.passing.set(a.id, { blocker: front.id, lane: a.lane }); a.state = 'changing lanes'; }
+          }
         }
       }
       if (a.direction === 1 && player.s > a.s && player.s - a.s < 10 + a.speed * 1.4 && Math.abs(player.x - a.x) < 2.6)
@@ -88,8 +107,10 @@ export class Traffic {
       if (!police && a.kind !== 'police' && a.direction === 1 && a.id % 9 === 0 && road.branchCenter(a.s) !== undefined) { a.route = 'detour'; a.targetX = road.branchCenter(a.s)!; targetSpeed = Math.min(targetSpeed, 24); }
       else if (!police && a.route === 'detour') { a.route = 'main'; a.targetX = LANES[a.lane]; }
       if (a.impact > 0) targetSpeed *= .5;
-      a.speed += clamp(targetSpeed * (1 - a.damage * .003) - a.speed, -9 * dt, 3 * dt);
-      a.lateral = damp(a.lateral, clamp((a.targetX - a.x) * .9, -2.2, 2.2), a.impact > 0 ? .5 : 2, dt);
+      const acceleration = police ? 6.8 - Math.min(1, a.speed / pursuitSpeed) * 2.6 : 3;
+      a.speed += clamp(targetSpeed * (1 - a.damage * .003) - a.speed, (police ? -11.5 : -9) * dt, acceleration * dt);
+      const lateralLimit = police ? 3.5 : 2.2;
+      a.lateral = damp(a.lateral, clamp((a.targetX - a.x) * (police ? 1.3 : .9), -lateralLimit, lateralLimit), a.impact > 0 ? .5 : police ? 3.5 : 2, dt);
       a.spin = damp(a.spin, 0, 3, dt);
       a.x += a.lateral * dt; a.s += a.speed * a.direction * dt;
       const heading = Math.atan2(a.lateral, a.speed * a.direction);

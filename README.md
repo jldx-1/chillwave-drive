@@ -38,7 +38,7 @@ Touch screens also have steering, accelerator, brake and camera buttons. Keyboar
 
 - Fixed 60 Hz force-based driving with quick speed-sensitive steering, fast left/right transitions, cornering grip reserved while accelerating, heading recovery after keyboard lane changes, momentum inertia, drag, rolling resistance, automatic gears, shared braking/cornering wet traction, brake-induced oversteer, countersteering and handbrake slides, visual body roll/pitch and continuous relative collision checks. Mass-dependent impulses transfer longitudinal/lateral momentum between player, police and traffic vehicles, with angular response, penetration correction, barrier scrapes and roadside maintenance obstacles.
 - Four forward lanes and a separated oncoming carriageway. Traffic uses headway braking, guarded lane changes and bounded recycling. Vehicles face their actual travel direction.
-- White police utility SUVs have black steel wheels, tinted windows, large POLICE side markings, a green rocker stripe, front push bars, a driver-side spotlight and slim roof lightbars. Police cruise as quiet forward patrols. Overtaking or hitting one activates that same vehicle’s lights, siren and pursuit AI. Later patrols can join; active units remain in the simulation rather than being respawned. Pursuit escalates to level five; sirens use actual active vehicle positions. Low-speed capture requires five seconds near police. Accumulated damage and immobilization can also end the drive.
+- White police utility SUVs have smoothly crowned roofs/hoods, tapered bodywork, curved glazing, black steel wheels, tinted windows, large POLICE side markings, a green rocker stripe, front push bars, a driver-side spotlight and slim roof lightbars. Police cruise as quiet forward patrols. Overtaking or hitting one activates that same vehicle’s lights, siren and pursuit AI. Later patrols can join; active units remain in the simulation rather than being respawned. Pursuit units accelerate harder, have a speed reserve above the player’s maximum, retain a passing lane until clear of slower traffic, and leave speed-sensitive braking room. Pursuit escalates to level five; sirens use actual active vehicle positions. Low-speed capture requires five seconds near police. Accumulated damage and immobilization can also end the drive.
 - A seeded, streamed highway and city, road signs, lighting and overpasses. Fourteen 120 m chunks surround the car; scene coordinates rebase every kilometer while logical distance stays continuous.
 - A 900 m service loop exits right at 800 m and repeats every 3 km. It has explicit entry/rejoin connectors, traffic, separate road bounds and map guidance. Follow it around to rejoin at 1.7 km.
 - A locally bundled, attributed Porsche 911 GT3 GLB with metallic cyan clearcoat, rounded coupe bodywork, oval headlights, dark multi-spoke wheels, a fixed rear wing and a detailed interior. Same-world cockpit and chase cameras animate its wheel and steering geometry, wipers, working dashboard, rear-view rendering, headlights and brake lights. Water-bead shading and damage scratches affect the bodywork.
@@ -72,18 +72,24 @@ Browser tests exercise the production build: actual keyboard driving, cockpit/ch
 
 ## GitHub Pages
 
-The static build needs no backend or Node server in production. Vite uses a relative base, so JS, fonts and audio work under either the existing repository path or `/chillwave-drive/`.
+GitHub Pages must publish the **compiled `dist/` folder**. Publishing the repository root serves the development `index.html`, which references `src/main.ts`; Pages does not compile TypeScript, causing the `main.ts` 404 / blank page.
 
-The workflow in `.github/workflows/deploy.yml` installs dependencies, runs tests, builds the game, verifies Chromium and uploads/deploys `dist` when pushed to `main` (or manually dispatched). Pull requests validate without deploying.
+1. Commit and push the project **including `.github/workflows/deploy.yml`** to `main`. The `.github` folder must be included; it is the deployment workflow.
+2. In the GitHub repository, open **Settings → Pages → Build and deployment → Source**, and select **GitHub Actions**. Use this source instead of “Deploy from a branch”. [GitHub setup instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+3. Open **Actions → Chillwave Drive — build, test and deploy** and run the workflow (or push another change to `main`). Wait for both `build` and `deploy` to pass.
+4. Open the URL shown by the deployment / **Settings → Pages**. After changing deployment sources, refresh the page with the browser cache bypassed.
 
-Manual repository setup:
+The workflow installs dependencies, runs unit and Chromium gameplay tests, builds the site, checks the compiled entry, fonts, audio, model, textures and local credit links, and publishes only `dist/`. Pull requests validate without deploying. The final build reads GitHub Pages' actual base path, so an existing `/vaporwave-parkour/` repository, a renamed `/chillwave-drive/` repository, an account site or a custom domain gets the appropriate URLs without editing the source. A repository rename is optional and is separate from this fix.
 
-1. In GitHub repository **Settings → General**, rename `vaporwave-parkour` to `chillwave-drive` if desired. The local directory name does not affect the application.
-2. Update your Git remote URL after the rename: `git remote set-url origin git@github.com:jldx-1/chillwave-drive.git`.
-3. In **Settings → Pages**, select **GitHub Actions** as the source.
-4. Push reviewed changes to `main` and let the workflow finish. Expected renamed URL: `https://jldx-1.github.io/chillwave-drive/`.
-5. At that actual hosted URL, check the network panel for missing assets, start a drive, switch cameras, listen, pause, reload and verify preferences.
+To check the static build locally:
 
-A local repository-subdirectory test verifies asset layout; it does not verify GitHub's hosted deployment. Repository renaming, remote changes and publishing are not performed by the local build.
+```bash
+npm run build:pages
+npm run preview
+```
+
+Local builds use relative asset URLs. To reproduce a specific production path, set `VITE_BASE_PATH=/chillwave-drive/` (including both slashes) when building. See [Vite's Pages deployment guide](https://vite.dev/guide/static-deploy.html#github-pages).
+
+Browser tests serve the compiled site under both `/chillwave-drive/` and `/vaporwave-parkour/` without a dev server or fallback routing. The local checks verify the deployment layout; they do not publish or change your GitHub settings. After the workflow deploys, check the actual hosted URL by starting a drive, switching cameras, playing audio and reloading preferences.
 
 See [GAME_PLAN.md](GAME_PLAN.md) for architecture, milestones and validation limits.

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { buildPoliceCar, isSharedPoliceResource } from '../src/drive/police-car';
 import { POLICE_SIZE } from '../src/drive/config';
 import { Traffic } from '../src/drive/traffic';
+import { policeFacePanel, policeRoof } from '../src/drive/police-body';
 const lamps = () => ({ head: new THREE.MeshBasicMaterial(), brake: new THREE.MeshStandardMaterial(), red: new THREE.MeshBasicMaterial(), blue: new THREE.MeshBasicMaterial() });
 
 describe('police utility SUV', () => {
@@ -47,4 +48,19 @@ describe('police utility SUV', () => {
     expect(first.spins[1].quaternion.equals(other)).toBe(true);
     expect(second.wheels[0].rotation.y).toBe(0);expect(second.spins[0].rotation.x).toBe(0);
   });
+  it('keeps a crowned roof and visibly curved, forward-facing headlamp lenses', () => {
+    const roof=policeRoof(),positions=roof.getAttribute('position');
+    const center:number[]=[],edges:number[]=[];
+    for(let i=0;i<positions.count;i++)if(Math.abs(positions.getZ(i)-.4)<.05){
+      const x=Math.abs(positions.getX(i));if(x<.05)center.push(positions.getY(i));if(x>.77)edges.push(positions.getY(i));
+    }
+    expect(center.length).toBeGreaterThan(0);expect(edges.length).toBeGreaterThan(0);
+    expect(Math.min(...center)-Math.max(...edges)).toBeGreaterThan(.03);
+    const lens=policeFacePanel(.798,.997,.442,.172),normals=lens.getAttribute('normal');
+    const nx:number[]=[];
+    for(let i=0;i<normals.count;i++) { expect(normals.getZ(i)).toBeLessThan(-.5);nx.push(normals.getX(i)); }
+    expect(Math.max(...nx)-Math.min(...nx)).toBeGreaterThan(.25);
+    roof.dispose();lens.dispose();
+  });
+
 });
