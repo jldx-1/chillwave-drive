@@ -58,16 +58,35 @@ export function policeHood():THREE.BufferGeometry {
   },40,32);
 }
 export function policeCabinSide(side:number):THREE.BufferGeometry {
-  return policePatch((u,v)=>{
-    const z=-1.16+3.55*u,y=THREE.MathUtils.lerp(policeBelt(z),policeRoofHeight(z),v);
-    return[side*policeCabinX(y,z),y,z];
-  },80,18);
+  // Cut real apertures rather than laying transparent glass over opaque white panels.
+  const shape=new THREE.Shape();
+  for(let i=0;i<=80;i++){const z=-1.16+3.55*i/80;i?shape.lineTo(z,policeBelt(z)):shape.moveTo(z,policeBelt(z));}
+  for(let i=80;i>=0;i--){const z=-1.16+3.55*i/80;shape.lineTo(z,policeRoofHeight(z));}
+  shape.closePath();
+  for(const polygon of [
+    [[-1.035,1.283],[.34,1.283],[.34,1.726],[-.51,1.703]],
+    [[.47,1.283],[1.46,1.283],[1.33,1.715],[.47,1.728]],
+    [[1.62,1.285],[2.255,1.279],[2.10,1.565],[1.49,1.708]]
+  ]){
+    const hole=new THREE.Path();polygon.forEach(([z,y],i)=>i?hole.lineTo(z,y):hole.moveTo(z,y));hole.closePath();shape.holes.push(hole);
+  }
+  const g=new THREE.ShapeGeometry(shape),pos=g.getAttribute('position');
+  for(let i=0;i<pos.count;i++){const z=pos.getX(i),y=pos.getY(i);pos.setXYZ(i,side*policeCabinX(y,z),y,z);}
+  g.computeVertexNormals();return g;
 }
 export function policeRoof():THREE.BufferGeometry {
-  return policePatch((u,v)=>{
-    const z=-1.16+3.55*v,y=policeRoofHeight(z),cross=u*2-1;
-    return[cross*policeCabinX(y,z),y+.043*(1-cross*cross),z];
-  },28,72);
+  // A grid aligned to glazing boundaries leaves the windscreen and rear glass genuinely open.
+  const us=[...new Set([...Array.from({length:29},(_,i)=>i/28),.029,.971])].sort((a,b)=>a-b);
+  const edges=[-1.115,-.545,1.985,2.355].map(z=>(z+1.16)/3.55);
+  const vs=[...new Set([...Array.from({length:73},(_,i)=>i/72),...edges])].sort((a,b)=>a-b);
+  const p:number[]=[],uv:number[]=[],indices:number[]=[];
+  for(const v of vs)for(const u of us){const z=-1.16+3.55*v,y=policeRoofHeight(z),cross=u*2-1;p.push(cross*policeCabinX(y,z),y+.043*(1-cross*cross),z);uv.push(u,v);}
+  for(let j=0;j<vs.length-1;j++)for(let i=0;i<us.length-1;i++){
+    const u=(us[i]+us[i+1])/2,v=(vs[j]+vs[j+1])/2;
+    if(u>.029&&u<.971&&((v>edges[0]&&v<edges[1])||(v>edges[2]&&v<edges[3])))continue;
+    const a=j*us.length+i;indices.push(a,a+1,a+us.length,a+1,a+us.length+1,a+us.length);
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();return g;
 }
 /** A small corner radius avoids hard rectangular window outlines. */
 export function policeSidePanel(side:number,corners:number[][],glass=false):THREE.BufferGeometry {

@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { POLICE_SIZE } from './config';
+// Offline authoring dimensions stay independent of the measured exported catalog.
+export const POLICE_SOURCE_WHEEL_RADIUS = .405;
 import { policeCabinSide, policeFacePanel, policeFascia, policeFrontZ, policeHood, policeLowerSide, policeRearZ, policeRoof, policeRoofHeight, policeSidePanel, policeSkinX, policeTailShoulder, policeWindshield } from './police-body';
 
 /** Utility patrol SUV: metres, nose toward -Z. Mirrors extend beyond the collision body. */
@@ -138,7 +139,7 @@ function makeAssets(): Assets {
   for(const s of [-1,1]) {
     face('brake',s*.885,1.073,.148,.278,true,.032,.013);
     face('brake',s*.744,1.159,.19,.073,true,.017,.016);
-    face('head',s*.887,.976,.095,.025,true,.006,.022);
+    face(lens,s*.887,.976,.095,.025,true,.006,.022);
     face('brake',s*.764,.404,.258,.023,true,.005,.026);
     tube(trim,[.585,.8,1.05,1.22].map(y=>[s*.81,y,policeRearZ(s*.81,y)+.004]),.0035,8);
   }
@@ -200,7 +201,7 @@ export function buildPoliceCar(lamps: PoliceLamps): PoliceCarRig {
   const body=new THREE.Group();body.name='White patrol SUV body';add(body,assets.body);group.add(body);
   const wheels:THREE.Group[]=[],spins:THREE.Group[]=[];
   for(const side of [-1,1])for(const z of [-1.5,1.51]){
-    const pivot=new THREE.Group();pivot.name=z<0?'Front steering wheel':'Rear wheel';pivot.position.set(side*.895,POLICE_SIZE.wheelRadius,z);
+    const pivot=new THREE.Group();pivot.name=z<0?'Front steering wheel':'Rear wheel';pivot.position.set(side*.895,POLICE_SOURCE_WHEEL_RADIUS,z);
     const spin=new THREE.Group();spin.name='Steel wheel and tire';spin.scale.x=side;add(spin,assets.wheel);pivot.add(spin);group.add(pivot);wheels.push(pivot);spins.push(spin);
   }
   return {group,wheels,spins};

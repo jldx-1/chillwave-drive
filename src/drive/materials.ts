@@ -19,10 +19,15 @@ export function facadeMaterial(seed: number, color: string): THREE.MeshStandardM
   map.wrapS = map.wrapT = emission.wrapS = emission.wrapT = THREE.RepeatWrapping; map.anisotropy = 4;
   const m = new THREE.MeshStandardMaterial({ map, emissiveMap: emission, emissive: '#ffffff', emissiveIntensity: .35, roughness: .38, metalness: .35 }); m.userData.facade = true; return m;
 }
-export function roadTextures(): { color: THREE.Texture; normal: THREE.Texture; rough: THREE.Texture } {
+export function roadTextures(): { color: THREE.Texture; normal: THREE.Texture; rough: THREE.Texture; ready: Promise<void> } {
   const loader = new THREE.TextureLoader(), base = `${import.meta.env.BASE_URL}textures/`;
-  const color = loader.load(`${base}asphalt-diff.jpg`), normal = loader.load(`${base}asphalt-normal.jpg`), rough = loader.load(`${base}asphalt-rough.jpg`);
+  const pending:Promise<void>[]=[];
+  const load=(name:string):THREE.Texture=>{
+    let done!:()=>void;pending.push(new Promise<void>(resolve=>{done=resolve;}));
+    return loader.load(base+name,done,undefined,done);
+  };
+  const color=load('asphalt-diff.jpg'),normal=load('asphalt-normal.jpg'),rough=load('asphalt-rough.jpg');
   color.colorSpace = THREE.SRGBColorSpace;
-  for (const texture of [color, normal, rough]) { texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(8.25, 30); texture.anisotropy = 8; }
-  return { color, normal, rough };
+  for (const texture of [color, normal, rough]) { texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(1, 1); texture.anisotropy = 8; }
+  return { color, normal, rough, ready:Promise.all(pending).then(()=>{}) };
 }

@@ -21,28 +21,30 @@ function movePlayer(player: Vehicle, speed: number): void {
 }
 
 describe('police pursuit pace and traffic navigation', () => {
-  it('catches a player holding maximum highway speed without relocation or contact', () => {
+  it('catches and rear-quarters a player at maximum highway speed without relocating', () => {
     const { traffic, player, cop } = pursuit();
-    let fastest = 0, contacts = 0, farthest = 0;
+    let fastest = 0, contacts = 0, farthest = 0, attacks=0, rearHits=0;
     for (let frame = 0; frame < 70 / STEP; frame++) {
       const before = cop.s;
       movePlayer(player, TUNE.maxSpeed);
-      contacts += traffic.step(STEP, player, frame * STEP).contacts.length;
+      const event=traffic.step(STEP,player,frame*STEP);
+      contacts+=event.contacts.length;
+      rearHits+=event.contacts.filter(contact=>contact.s<player.s-1&&contact.impulse>100).length;
       expect(cop.s - before).toBeGreaterThanOrEqual(0);
       expect(cop.s - before).toBeLessThanOrEqual(94 * STEP + 1e-7);
+      attacks+=Number(cop.state==='ramming');
       fastest = Math.max(fastest, cop.speed);
       farthest = Math.max(farthest, player.s - cop.s);
     }
     expect(fastest).toBeGreaterThan(TUNE.maxSpeed + 8);
     expect(player.s - cop.s).toBeLessThan(31);
-    expect(player.s - cop.s).toBeGreaterThan(23);
+    expect(attacks).toBeGreaterThan(60);expect(rearHits).toBeGreaterThan(0);
     expect(player.s - cop.s).toBeLessThan(farthest / 5);
-    expect(cop.speed).toBeCloseTo(TUNE.maxSpeed, 1);
-    expect(contacts).toBe(0);
+    expect(contacts).toBeGreaterThan(0);expect(player.damage).toBeGreaterThan(0);
     expect(cop.active).toBe(true);
   });
 
-  it('matches a braking player and leaves enough clearance to stop without ramming', () => {
+  it('presses a braking player with real impacts and contains it for the timed arrest', () => {
     const { traffic, player, cop } = pursuit(TUNE.maxSpeed, 28);
     let bumperClearance = Infinity, contacts = 0;
     for (let frame = 0; frame < 24 / STEP; frame++) {
@@ -51,10 +53,10 @@ describe('police pursuit pace and traffic navigation', () => {
       contacts += traffic.step(STEP, player, frame * STEP).contacts.length;
       bumperClearance = Math.min(bumperClearance, player.s - cop.s - (cop.length + TUNE.length) / 2);
     }
-    expect(contacts).toBe(0);
-    expect(bumperClearance).toBeGreaterThan(2);
+    expect(contacts).toBeGreaterThan(0);
+    expect(bumperClearance).toBeLessThan(1);
     expect(cop.speed).toBeLessThan(.1);
-    expect(player.s - cop.s).toBeCloseTo(10, 0);
+    expect(player.s-cop.s).toBeGreaterThan(0);expect(player.s-cop.s).toBeLessThan(14);
     expect(traffic.capture).toBe(5);
   });
 

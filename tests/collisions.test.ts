@@ -12,6 +12,13 @@ describe('momentum and crash response',()=>{
     const momentum=a.vs*a.mass+b.vs*b.mass,energy=.5*a.mass*a.vs**2+.5*b.mass*b.vs**2;
     const c=solveContact(a,b)!;expect(c.speed).toBeGreaterThan(25);expect(a.vs).toBeLessThan(40);expect(b.vs).toBeGreaterThan(10);expect(a.vs*a.mass+b.vs*b.mass).toBeCloseTo(momentum,5);expect(.5*a.mass*a.vs**2+.5*b.mass*b.vs**2).toBeLessThan(energy);
   });
+  it('countersteering recovers collision spin without a lasting steering fault',()=>{
+    const car=new Vehicle();car.collide(100);car.setWorldVelocity(8,30);car.spin=.65;
+    for(let i=0;i<45;i++)car.step(STEP,{throttle:1,brake:0,steer:-1,handbrake:false,rear:false});
+    expect(car.damage).toBe(100);expect(Math.abs(car.spin)).toBeLessThan(.002);expect(car.steering).toBeLessThan(0);expect(car.s).toBeGreaterThan(15);
+    for(let i=0;i<25;i++)car.step(STEP,{throttle:1,brake:0,steer:1,handbrake:false,rear:false});
+    expect(car.steering).toBeGreaterThan(0);expect(Number.isFinite(car.speed+car.yaw+car.x)).toBe(true);
+  });
   it('side swipes transfer lateral momentum and rotate offset bodies',()=>{
     const a=body(0,{x:2,oldX:1,vx:12,s:0}),b=body(1,{x:3.5,oldX:3.5,s:1.1});const c=solveContact(a,b)!;
     expect(c.nx).toBeGreaterThan(.9);expect(a.vx).toBeLessThan(12);expect(b.vx).toBeGreaterThan(0);expect(Math.abs(a.spin)+Math.abs(b.spin)).toBeGreaterThan(.01);
@@ -35,12 +42,51 @@ describe('momentum and crash response',()=>{
     const obstacle=roadsideObstacles(3075)[0];expect(obstacle).toBeDefined();t.agents=[];p.x=obstacle.x;p.s=obstacle.s-1;p.previous={x:p.x,s:obstacle.s-5,yaw:0};p.speed=30;
     expect(t.step(STEP,p,1).contacts.some(c=>c.material==='concrete')).toBe(true);expect(p.speed).toBeLessThan(20);expect(p.damage).toBeGreaterThan(0);
   });
-  it('major damage reduces acceleration and creates alignment error',()=>{
-    const a=new Vehicle(),b=new Vehicle();b.collide(60);for(let i=0;i<180;i++){a.step(STEP,{throttle:1,brake:0,steer:0,handbrake:false,rear:false});b.step(STEP,{throttle:1,brake:0,steer:0,handbrake:false,rear:false});}expect(b.speed).toBeLessThan(a.speed);expect(b.alignment).not.toBe(0);
+  it('full damage preserves acceleration, braking and steering in either direction',()=>{
+    for(const steer of [-1,1]){
+      const fresh=new Vehicle(),damaged=new Vehicle();damaged.collide(100);
+      for(let i=0;i<120;i++){const input={throttle:1,brake:0,steer:0,handbrake:false,rear:false};fresh.step(STEP,input);damaged.step(STEP,input);}
+      const drive={throttle:1,brake:0,steer,handbrake:false,rear:false};
+      for(let i=0;i<20;i++){fresh.step(STEP,drive);damaged.step(STEP,drive);}
+      expect(damaged.damage).toBe(100);expect(damaged.speed).toBeCloseTo(fresh.speed,9);expect(damaged.x).toBeCloseTo(fresh.x,9);expect(damaged.steering*steer).toBeGreaterThan(0);
+      const speed=damaged.speed;for(let i=0;i<30;i++)damaged.step(STEP,{...drive,throttle:0,brake:1,steer:0});
+      expect(damaged.speed).toBeLessThan(speed);
+    }
   });
 });
 describe('modular architecture',()=>{
   it('is reproducible with multiple silhouettes and setbacks across streamed chunks',()=>{
     const specs=Array.from({length:100},(_,i)=>buildingSpec('CITY',i,1,1));expect(new Set(specs.map(s=>s.style)).size).toBe(5);expect(new Set(specs.map(s=>s.height)).size).toBeGreaterThan(90);expect(buildingSpec('CITY',5,1,1)).toEqual(buildingSpec('CITY',5,1,1));
+  });
+});
+
+describe('oriented collision accuracy',()=>{
+  it('allows separated diagonal cars through overlapping world boxes without false impacts',()=>{
+    const yaw=Math.PI/4,c=Math.cos(yaw),s=Math.sin(yaw);
+    const a=body(0,{x:0,s:0,oldX:0,oldS:0,yaw});
+    const b=body(1,{x:2.05*c,s:-2.05*s,oldX:2.05*c,oldS:-2.05*s,yaw});
+    expect(solveContact(a,b)).toBeUndefined();
+  });
+  it('allows a fast diagonal pass alongside another car without hitting its enlarged world box',()=>{
+    const yaw=Math.PI/4,c=Math.cos(yaw),s=Math.sin(yaw);
+    const a=body(0,{oldX:0,oldS:0,x:20*s,s:20*c,yaw,vx:100*s,vs:100*c});
+    const b=body(1,{x:10*s+2.1*c,s:10*c-2.1*s,oldX:10*s+2.1*c,oldS:10*c-2.1*s,yaw});
+    expect(solveContact(a,b)).toBeUndefined();
+  });
+  it('still catches fast diagonal impacts along actual vehicle edges',()=>{
+    const yaw=Math.PI/4,c=Math.cos(yaw),s=Math.sin(yaw);
+    const a=body(0,{oldX:0,oldS:0,x:20*s,s:20*c,yaw,vx:100*s,vs:100*c});
+    const b=body(1,{x:10*s,s:10*c,oldX:10*s,oldS:10*c,yaw});
+    const hit=solveContact(a,b)!;expect(hit).toBeDefined();expect(hit.speed).toBeGreaterThan(95);expect(a.vs).toBeLessThan(100*c);expect(b.vs).toBeGreaterThan(0);
+  });
+  it('ignores empty bumper corners but catches the actual bumper face',()=>{
+    const hull:readonly(readonly[number,number])[]=[[-1,-2],[-.6,-2.3],[.6,-2.3],[1,-2],[1,2],[.6,2.3],[-.6,2.3],[-1,2]];
+    const a=body(0,{x:0,oldX:0,hull,width:2}),corner=body(1,{x:.94,s:2.23,oldX:.94,oldS:2.23,width:.1,length:.1});
+    expect(solveContact(a,corner)).toBeUndefined();
+    expect(solveContact(body(0,{x:0,oldX:0,hull,width:2,oldS:-.2,vs:15}),body(1,{x:0,oldX:0,s:2.3,oldS:2.3,width:.1,length:.1}))).toBeDefined();
+  });
+  it('does not brake or damage cars that are already separating',()=>{
+    const a=body(0,{s:0,oldS:0,vs:-10}),b=body(1,{s:6,oldS:4.5,vs:10});
+    expect(solveContact(a,b)).toBeUndefined();expect(a.vs).toBe(-10);expect(b.vs).toBe(10);
   });
 });

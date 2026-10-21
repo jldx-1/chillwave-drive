@@ -17,12 +17,11 @@ export class DriveCamera {
     const followYaw = view === 'chase' ? pose.yaw - player.slipAngle * Math.min(1, player.driftAmount * 1.5) : pose.yaw;
     const z = sceneZ(pose.s, origin), sin = Math.sin(followYaw), cos = Math.cos(followYaw);
     if (view === 'cockpit') {
-      const vibration = reduced ? 0 : Math.sin(player.s * 2) * Math.min(.007, Math.abs(player.speed) * .0002);
-      this.position.set(pose.x + eye.x * cos - sin * eye.z, eye.y + vibration, z + eye.x * sin + cos * eye.z);
-      this.focus.set(pose.x + sin * (rear ? -50 : 80), 1.2 + player.pitch * 1.5, z - cos * (rear ? -50 : 80));
+      this.position.set(pose.x + eye.x * cos - sin * eye.z, eye.y, z + eye.x * sin + cos * eye.z);
+      this.focus.set(pose.x + sin * (rear ? -50 : 80), eye.y, z - cos * (rear ? -50 : 80));
       // Driver eye stays inside the moving cockpit during a view transition.
       if (rear) this.position.set(pose.x - sin * 2.6, 1.6, z + cos * 2.6);
-      this.camera.position.copy(this.position); this.focus.y = rear ? 1.6 : eye.y + player.pitch;
+      this.camera.position.copy(this.position); this.focus.y = rear ? 1.6 : eye.y;
     } else {
       const distance = (rear ? -1 : 1) * (7.5 + Math.abs(player.speed) * .025);
       this.position.set(pose.x - sin * distance, 3.25 + Math.abs(player.speed) * .006, z + cos * distance);
@@ -32,12 +31,12 @@ export class DriveCamera {
       if (!this.initialized || rear) this.camera.position.copy(this.position);
       else this.camera.position.lerp(this.position, 1 - Math.exp(-dt * 11));
     }
-    if (!reduced && player.impact > .01) {
+    if (view === 'chase' && !reduced && player.impact > .01) {
       const kick = player.impact * Math.sin(player.s * 17 + player.impact * 50);
       this.camera.position.x += kick * .045; this.camera.position.y += kick * .028;
     }
     this.camera.lookAt(this.focus);
-    this.camera.fov = damp(this.camera.fov, (view === 'cockpit' ? 71 : 59) + (reduced ? 0 : Math.min(8, Math.abs(player.speed) * .1)), 4, dt);
+    this.camera.fov = view==='cockpit' ? 71 : damp(this.camera.fov,59+(reduced?0:Math.min(8,Math.abs(player.speed)*.1)),4,dt);
     this.camera.updateProjectionMatrix(); this.initialized = true;
   }
 }

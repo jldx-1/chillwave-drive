@@ -1,17 +1,20 @@
+import { COLLISION_PROFILES } from './collision-profiles';
+import { VEHICLE_CATALOG } from './vehicle-catalog';
 import { Random, hashSeed } from '../core/random';
-import { POLICE_SIZE, LANES, ONCOMING, clamp, damp, type Density } from './config';
-import { road, roadsideObstacles } from './road';
-import { Vehicle, type HitBox } from './vehicle';
-import { solveContact, type Body2D, type Contact } from './collisions';
-export type PursuitState = 'patrolling' | 'following' | 'closing' | 'avoiding' | 'changing lanes' | 'flanking' | 'recovering' | 'searching' | 'rejoining';
+import { VEHICLE_DIMENSIONS, POLICE_TUNE, LANES, ONCOMING, clamp, damp, neutral, type Controls, type Density } from './config';
+import { road, roadsideObstacles, type Route } from './road';
+import { Vehicle, steeringLimit, type HitBox } from './vehicle';
+import { solveContact, sweptBounds, sweptClearance, type Body2D, type Contact } from './collisions';
+export type PursuitState = 'patrolling' | 'following' | 'closing' | 'avoiding' | 'changing lanes' | 'flanking' | 'recovering' | 'searching' | 'rejoining' | 'ramming';
 export interface Agent extends HitBox {
   id: number; oldX: number; oldS: number; speed: number; desired: number; lane: number; direction: 1 | -1;
-  kind: 'sedan' | 'suv' | 'van' | 'truck' | 'sport' | 'police'; targetX: number; cooldown: number;
+  kind: 'sedan' | 'suv' | 'pickup' | 'hatchback' | 'van' | 'truck' | 'sport' | 'police'; targetX: number; cooldown: number;
   state: PursuitState; route: 'main' | 'detour'; near: boolean; impact: number;
   active: boolean; yaw: number; lateral: number; spin: number; damage: number; pursuitTime: number;
+  steering?: number; roll?: number; pitch?: number; braking?: boolean; signal?: -1 | 0 | 1; routeId?: number;
 }
 const capacities = { low: 24, normal: 44, high: 62, dense: 80 };
-const masses = { sedan: 1600, suv: 2200, van: 2600, truck: 9500, sport: 1450, police: 1900 };
+const masses = { ...Object.fromEntries(Object.entries(VEHICLE_CATALOG).map(([kind, spec]) => [kind, spec.mass])), van: 2600 } as Record<Agent['kind'], number>;
 // Pursuit units need a speed reserve above the player's 78 m/s highway limit.
 const pursuitSpeed = 94;
 export class Traffic {
@@ -19,10 +22,15 @@ export class Traffic {
   level = 0; capture = 0; nearMisses = 0; collisions = 0; pressure = 0; joins = 0;
   private random: Random; private serial = 0;
   private contacts = new Map<string, number>();
+  private scoreContacts = new Map<number,number>();
+  private ramCooldown = new Map<number,number>();
+  private closePasses = new Map<number, { clearance: number; touched: boolean }>();
   private passing = new Map<number, { blocker: number; lane: number }>();
+  private policeVehicles = new Map<number, Vehicle>();
+  private refusedRoutes = new Map<number, number>();
   constructor(seed: string, readonly density: Density = 'normal') { this.random = new Random(hashSeed(seed)); }
   reset(): void {
-    this.agents = []; this.level = 0; this.capture = 0; this.nearMisses = 0; this.collisions = 0; this.pressure = 0; this.joins = 0; this.contacts.clear(); this.passing.clear();
+    this.agents = []; this.level = 0; this.capture = 0; this.nearMisses = 0; this.collisions = 0; this.pressure = 0; this.joins = 0; this.contacts.clear(); this.scoreContacts.clear(); this.ramCooldown.clear(); this.closePasses.clear(); this.passing.clear(); this.policeVehicles.clear(); this.refusedRoutes.clear();
     for (let i = 0; i < capacities[this.density]; i++) this.spawn(0, i, true);
   }
   private spawn(playerS: number, index: number, initial = false): void {
@@ -31,13 +39,13 @@ export class Traffic {
     const lane = police ? 0 : Math.floor(r.next() * 4), x = (direction === 1 ? LANES : ONCOMING)[lane];
     let s = playerS + (initial ? (police && index === 1 ? 72 : 130 + index * 17) : 800 + r.range(0, 220));
     while (this.agents.some(a => a.direction === direction && a.lane === lane && Math.abs(a.s - s) < 38)) s += 40;
-    const kind = police ? 'police' : (['sedan', 'suv', 'van', 'sport', 'truck'] as const)[Math.floor(r.next() * 5)];
+    const kind = police ? 'police' : (['sedan', 'suv', 'pickup', 'sport', 'truck', 'hatchback'] as const)[Math.floor(r.next() * 6)];
     const desired = police ? 22 : r.range(kind === 'truck' ? 20 : 24, kind === 'sport' ? 42 : 34);
-    this.agents.push({ id: this.serial++, x, oldX: x, s, oldS: s, width: kind === 'truck' ? 2.5 : police ? POLICE_SIZE.width : 1.95,
-      length: kind === 'truck' ? 9 : kind === 'van' ? 5.5 : police ? POLICE_SIZE.length : 4.6, kind, direction, lane,
+    this.agents.push({ id: this.serial++, x, oldX: x, s, oldS: s, width: VEHICLE_DIMENSIONS[kind].width,
+      length: VEHICLE_DIMENSIONS[kind].length, kind, direction, lane,
       speed: police ? 20 : r.range(18, 30), desired, targetX: x, cooldown: r.range(1, 7),
       state: 'patrolling', route: 'main', near: false, impact: 0, active: false, yaw: direction === 1 ? 0 : Math.PI,
-      lateral: 0, spin: 0, damage: 0, pursuitTime: 0 });
+      lateral: 0, spin: 0, damage: 0, pursuitTime: 0, steering: 0, roll: 0, pitch: 0, braking: false, signal: 0 });
   }
   activate(a: Agent): boolean {
     if (a.kind !== 'police' || a.active || this.activePolice.length >= 8) return false;
@@ -49,9 +57,66 @@ export class Traffic {
       Math.abs(a.x - (agent.direction === 1 ? LANES : ONCOMING)[lane]) < 2.9 &&
       Math.abs(a.s - agent.s) < Math.max(24, agent.speed * 1.3));
   }
-  step(dt: number, player: Vehicle, elapsed: number): { hit: boolean; near: boolean; contacts: Contact[]; joined: number } {
+  private navigateRoute(a: Agent, player: Vehicle, pursuing: boolean, speed: number): number {
+    if (a.direction !== 1) return speed;
+    const entry = road.entryWindow(a.s), playerRoute = road.routeAt(player.s);
+    if (a.routeId === undefined && entry && this.refusedRoutes.get(a.id) !== entry.id) {
+      const wantsDetour = pursuing ? playerRoute?.id === entry.id && player.x > 14.8 : a.kind !== 'police' && a.id % 9 === 0;
+      if (wantsDetour) { a.routeId = entry.id; a.route = 'detour'; this.passing.delete(a.id); }
+    }
+    if (a.routeId === undefined) return speed;
+    const route = road.routeAt(a.routeId * road.interval + road.exitAt) as Route;
+    if (a.s > route.rejoin) {
+      a.routeId = undefined; a.route = 'main'; a.lane = 3; a.targetX = LANES[3]; return speed;
+    }
+    if (a.s >= route.exit && a.x < 11.8) {
+      // An occupied exit lane is missed, rather than crossing a separated gore later.
+      this.refusedRoutes.set(a.id, route.id); a.routeId = undefined; a.route = 'main'; return speed;
+    }
+    a.route = 'detour'; a.lane = 3;
+    if (a.s < route.exit) { a.targetX = LANES[3]; return Math.min(speed, 30); }
+    const sample = road.sampleDetour(a.s)!;
+    const preview = road.sampleDetour(Math.min(route.rejoin, a.s + Math.max(10, a.speed * .65)))!;
+    a.targetX = preview.x;
+    let limit = sample.speedLimit;
+    const approachingReturn = a.s > route.mergeStart - 80;
+    if (approachingReturn) {
+      const mergingTraffic = this.agents.some(b => b !== a && b.direction === 1 && b.route !== 'detour' &&
+        Math.abs(b.x - LANES[3]) < 2.7 && Math.abs(b.s - a.s) < Math.max(24, a.speed * 1.5));
+      if (mergingTraffic && a.s >= route.mergeStart - 15) { a.targetX = Math.max(17.3, sample.x); limit = 0; a.state = 'avoiding'; }
+    }
+    return Math.min(speed, limit);
+  }
+  private drivePolice(a: Agent, targetSpeed: number, dt: number): void {
+    let vehicle = this.policeVehicles.get(a.id);
+    if (!vehicle) { vehicle = new Vehicle(POLICE_TUNE, -Infinity); this.policeVehicles.set(a.id, vehicle); }
+    // Agent state also accepts externally applied contact impulses and deterministic test setup.
+    vehicle.x = a.x; vehicle.s = a.s; vehicle.yaw = a.yaw; vehicle.spin = a.spin; vehicle.damage = a.damage;
+    vehicle.setWorldVelocity(a.lateral, a.speed);
+    const controls = this.policeControls(a, vehicle, targetSpeed);
+    vehicle.step(dt, controls, true, 1, (x,s,yaw) => road.constrainPolice(x,s,yaw,POLICE_TUNE.footprint,a.route));
+    a.x = vehicle.x; a.s = vehicle.s; a.yaw = vehicle.yaw; a.speed = Math.max(0, vehicle.velocityS);
+    a.lateral = vehicle.lateral; a.spin = vehicle.spin; a.steering = vehicle.steering;
+    a.roll = vehicle.roll; a.pitch = vehicle.pitch; a.braking = controls.brake > .02;
+  }
+  private policeControls(a: Agent, vehicle: Vehicle, targetSpeed: number): Controls {
+    const controls = neutral(), speed = Math.max(0, vehicle.speed), tune = vehicle.tuning;
+    const lookahead = Math.max(12, speed * .65);
+    const target = road.constrainPolice(a.targetX, a.s + lookahead, 0, POLICE_TUNE.footprint, a.route);
+    const heading = Math.atan2(target - a.x, lookahead);
+    const turn = (heading - vehicle.yaw) * 2.8;
+    const desiredSteer = Math.atan(turn * tune.wheelbase / Math.max(4, speed));
+    controls.steer = clamp(desiredSteer / steeringLimit(speed, tune.wheelbase), -1, 1);
+    const acceleration = clamp((targetSpeed - speed) * 2, -8.5, 6.8);
+    const resistance = tune.drag * speed * speed + tune.rolling;
+    if (targetSpeed < .05 && speed < .05) { controls.brake = 1; controls.throttle = 1; }
+    else if (acceleration < -resistance / tune.mass) controls.brake = clamp((-acceleration * tune.mass - resistance) / tune.brakeForce, 0, 1);
+    else controls.throttle = clamp((acceleration * tune.mass + resistance) / (tune.engineForce * Math.max(.22, 1 - speed / tune.driveFalloffSpeed) * (1 - vehicle.damage * tune.damagePowerLoss)), 0, 1);
+    return controls;
+  }
+  step(dt: number, player: Vehicle, elapsed: number): { hit: boolean; near: boolean; boost: boolean; touching: boolean; contacts: Contact[]; scoreHits: Contact[]; joined: number } {
     const beforeJoins = this.joins;
-    let hit = false, near = false;
+    let hit = false, near = false, boost = false;
     for (const a of this.agents) {
       a.oldX = a.x; a.oldS = a.s; a.cooldown -= dt; a.impact = Math.max(0, a.impact - dt);
       const police = a.kind === 'police' && a.active, gap = player.s - a.s;
@@ -63,14 +128,11 @@ export class Traffic {
         else if (gap > 200) { a.state = 'rejoining'; targetSpeed = Math.min(pursuitSpeed, Math.max(30, player.speed + 14)); }
         else {
           a.state = gap > 26 ? 'closing' : this.level >= 4 ? 'flanking' : 'following';
-          // Ease down before reaching the player; leave extra braking room at highway speed.
+          // Line up with room to brake; a clear rear-quarter attack below overrides this cruising gap.
           const followingGap = 10 + Math.max(0, player.speed) * .22;
-          targetSpeed = clamp(player.speed + (gap - followingGap) * .5, 0, pursuitSpeed);
+          targetSpeed = clamp(player.speed + (gap - followingGap) * .5 - Math.max(0, a.speed - player.speed) * 1.5, 0, pursuitSpeed);
         }
-        const branch = road.branchCenter(a.s);
-        a.route = player.x > 16 && branch !== undefined ? 'detour' : 'main';
-        if (a.route === 'detour') { a.targetX = branch!; this.passing.delete(a.id); }
-        else {
+        if (a.route !== 'detour') {
           const pass = this.passing.get(a.id);
           const blocker = pass && this.agents.find(b => b.id === pass.blocker);
           // Hold the free lane until the whole SUV has passed, instead of chasing
@@ -102,36 +164,77 @@ export class Traffic {
           }
         }
       }
-      if (a.direction === 1 && player.s > a.s && player.s - a.s < 10 + a.speed * 1.4 && Math.abs(player.x - a.x) < 2.6)
+      targetSpeed = this.navigateRoute(a, player, police, targetSpeed);
+      const sameRoad=a.route==='detour' ? road.onDetour(player.x,player.s) && road.sampleDetour(a.s)?.phase==='service'
+        : !road.onDetour(player.x,player.s);
+      const attack=police && a.pursuitTime>2 && a.impact<=0 && elapsed>=(this.ramCooldown.get(a.id)??0) &&
+        gap>0 && gap<55 && player.velocityS>8 && sameRoad && !this.passing.has(a.id) &&
+        (!front || frontGap>12+a.speed*1.5);
+      if(attack){
+        // Aim at a rear quarter with a finite closing speed. The shared contact solver supplies the impact.
+        const side=player.x>14?-1:player.x<3?1:a.id%2?1:-1;
+        const prediction=clamp(gap/Math.max(15,a.speed),.1,.4);
+        const rearX=player.x-Math.sin(player.yaw)*player.tuning.length*.45;
+        a.targetX=road.constrainPolice(rearX+player.lateral*prediction+side*.9,a.s,0,POLICE_TUNE.footprint,a.route);
+        targetSpeed=Math.min(pursuitSpeed,player.velocityS+clamp(4+gap*.12,5,10));
+        a.state='ramming';
+      } else if (a.direction === 1 && player.s > a.s && player.s - a.s < 10 + a.speed * 1.4 && Math.abs(player.x - a.x) < 2.6)
         targetSpeed = Math.min(targetSpeed, Math.max(0, player.speed + (player.s - a.s - 9) * .5));
-      if (!police && a.kind !== 'police' && a.direction === 1 && a.id % 9 === 0 && road.branchCenter(a.s) !== undefined) { a.route = 'detour'; a.targetX = road.branchCenter(a.s)!; targetSpeed = Math.min(targetSpeed, 24); }
-      else if (!police && a.route === 'detour') { a.route = 'main'; a.targetX = LANES[a.lane]; }
       if (a.impact > 0) targetSpeed *= .5;
-      const acceleration = police ? 6.8 - Math.min(1, a.speed / pursuitSpeed) * 2.6 : 3;
-      a.speed += clamp(targetSpeed * (1 - a.damage * .003) - a.speed, (police ? -11.5 : -9) * dt, acceleration * dt);
-      const lateralLimit = police ? 3.5 : 2.2;
-      a.lateral = damp(a.lateral, clamp((a.targetX - a.x) * (police ? 1.3 : .9), -lateralLimit, lateralLimit), a.impact > 0 ? .5 : police ? 3.5 : 2, dt);
-      a.spin = damp(a.spin, 0, 3, dt);
-      a.x += a.lateral * dt; a.s += a.speed * a.direction * dt;
-      const heading = Math.atan2(a.lateral, a.speed * a.direction);
-      a.yaw += Math.atan2(Math.sin(heading - a.yaw), Math.cos(heading - a.yaw)) * Math.min(1, dt * 3) + a.spin * dt;
-      if (a.kind === 'police' && !a.active && player.previous.s <= a.oldS && player.s > a.s && Math.abs(player.x - a.x) < 18) this.activate(a);
-      if (!a.near && a.oldS >= player.previous.s && a.s < player.s) {
-        a.near = true;
-        if (Math.abs(a.x - player.x) < 3.2 && Math.abs(a.x - player.x) > 2 && player.speed > 22) { this.nearMisses++; near = true; }
+      const previousLateral = a.lateral, previousSpeed = a.speed, previousYaw = a.yaw;
+      a.signal = Math.abs(a.targetX - a.x) > .8 ? Math.sign(a.targetX - a.x) as -1 | 1 : 0;
+      a.braking = targetSpeed < a.speed - .4;
+      if (a.kind === 'police') this.drivePolice(a, targetSpeed, dt);
+      else {
+        a.speed += clamp(targetSpeed * (1 - a.damage * .003) - a.speed, -9 * dt, 3 * dt);
+        a.lateral = damp(a.lateral, clamp((a.targetX - a.x) * .9, -2.2, 2.2), a.impact > 0 ? .5 : 2, dt);
+        a.spin = damp(a.spin, 0, 3, dt);
+        a.x += a.lateral * dt; a.s += a.speed * a.direction * dt;
+        const heading = Math.atan2(a.lateral, a.speed * a.direction);
+        a.yaw += Math.atan2(Math.sin(heading - a.yaw), Math.cos(heading - a.yaw)) * Math.min(1, dt * 3) + a.spin * dt;
+        const wheelbase = a.kind === 'van' ? 3.1 : VEHICLE_CATALOG[a.kind].wheelbase;
+        a.steering = Math.atan((a.yaw - previousYaw) / dt * wheelbase / Math.max(4, a.speed));
+        a.roll = damp(a.roll ?? 0, clamp((a.lateral - previousLateral) / dt * .006 * a.direction, -.045, .045), 7, dt);
+        a.pitch = damp(a.pitch ?? 0, clamp((a.speed - previousSpeed) / dt * .006, -.045, .045), 7, dt);
       }
+      if (a.kind === 'police' && !a.active && player.previous.s <= a.oldS && player.s > a.s && Math.abs(player.x - a.x) < 18) this.activate(a);
     }
     const bodies: Body2D[] = [{ id: -1, x: player.x, s: player.s, oldX: player.previous.x, oldS: player.previous.s,
       vx: player.lateral, vs: player.velocityS, yaw: player.yaw, spin: player.spin,
-      mass: 1480, width: 1.95, length: 4.6 }, ...this.agents.map(a => ({
+      hull: player.tuning.footprint, mass: player.tuning.mass, width: player.tuning.width, length: player.tuning.length }, ...this.agents.map(a => ({
       id: a.id, x: a.x, s: a.s, oldX: a.oldX, oldS: a.oldS, vx: a.lateral, vs: a.speed * a.direction,
-      yaw: a.yaw, spin: a.spin, mass: masses[a.kind], width: a.width, length: a.length })),
+      yaw: a.yaw, spin: a.spin, hull: a.kind==='van'?undefined:COLLISION_PROFILES[a.kind].hull, mass: masses[a.kind], width: a.width, length: a.length })),
       ...roadsideObstacles(player.s).map(o=>({...o,oldX:o.x,oldS:o.s,vx:0,vs:0,yaw:0,spin:0,mass:1e12}))];
-    const impacts: Contact[] = [];
+    // Measure the full approach/pass before impulses alter the swept poses. Reward only after separation.
+    for (let i=0; i<this.agents.length; i++) {
+      const a=this.agents[i], b=bodies[i+1], p=bodies[0];
+      if (a.near || Math.abs(a.s-player.s)>22 || Math.abs(a.x-player.x)>7) {
+        this.closePasses.delete(a.id); continue;
+      }
+      if (!this.closePasses.has(a.id) && a.oldS>player.previous.s)
+        this.closePasses.set(a.id,{clearance:Infinity,touched:false});
+      const pass=this.closePasses.get(a.id);
+      if (pass) pass.clearance=Math.min(pass.clearance,sweptClearance(p,b));
+    }
+    let playerTouched=false;
+    const bounds=bodies.map(sweptBounds);
+    const impacts: Contact[] = [], scoreHits: Contact[] = [];
     for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
       const a = bodies[i], b = bodies[j];
-      if (Math.abs(a.s - b.s) > (a.length + b.length) * .6 + Math.abs(a.vs - b.vs) * dt || Math.abs(a.x - b.x) > (a.length+b.length)*.6+Math.abs(a.vx-b.vx)*dt) continue;
-      const contact = solveContact(a, b); if (!contact) continue; if(a.id < -1 || b.id < -1)contact.material='concrete';
+      const aa=bounds[i],bb=bounds[j];
+      if(aa.maxX<bb.minX||bb.maxX<aa.minX||aa.maxS<bb.minS||bb.maxS<aa.minS)continue;
+      const contact = solveContact(a, b); if (!contact) continue; bounds[i]=sweptBounds(a);bounds[j]=sweptBounds(b); if(a.id < -1 || b.id < -1)contact.material='concrete';
+      if (a.id===-1 || b.id===-1) {
+        playerTouched=true;
+        const other=a.id===-1?b.id:a.id;
+        const pass=this.closePasses.get(other);
+        if(pass) pass.touched=true;
+        const last=this.scoreContacts.get(other)??-Infinity;
+        if(elapsed-last>1)scoreHits.push(contact);
+        this.scoreContacts.set(other,elapsed);
+        const cop=this.agents.find(agent=>agent.id===other&&agent.kind==='police'&&agent.active);
+        if(cop && contact.speed>.7)this.ramCooldown.set(cop.id,elapsed+3);
+      }
       if (contact.speed < .7) continue;
       const key = `${a.id}:${b.id}`, last = this.contacts.get(key) ?? -Infinity;
       if (elapsed - last > .25) {
@@ -143,11 +246,24 @@ export class Traffic {
       }
     }
     const p = bodies[0]; player.x = road.constrain(p.x, p.s); player.s = p.s; player.setWorldVelocity(p.vx, p.vs);
-    player.speed = clamp(player.speed, -12, 85); player.spin = clamp(p.spin, -1.2, 1.2);
+    player.speed = clamp(player.speed, -12, 85); player.spin = clamp(p.spin, -.65, .65);
     this.agents.forEach((a, i) => {
-      const b = bodies[i + 1]; a.x = a.direction === 1 ? road.constrain(b.x, b.s) : clamp(b.x, -15.45, -1.25);
-      if (a.x !== b.x) { a.lateral = -b.vx * .2; a.speed *= .98; } else a.lateral = b.vx;
+      const b = bodies[i + 1];
+      a.x = a.kind==='police' ? road.constrainPolice(b.x,b.s,b.yaw,POLICE_TUNE.footprint,a.route)
+        : a.direction === 1 ? road.constrain(b.x, b.s) : clamp(b.x, -15.45, -1.25);
+      a.lateral = a.x!==b.x && b.vx*(b.x-a.x)>0 ? -b.vx*.15 : b.vx;
       a.s = b.s; a.speed = Math.max(0, b.vs * a.direction); a.spin = clamp(b.spin, -.9, .9);
+      const pass=this.closePasses.get(a.id);
+      if (pass) {
+        const playerBounds=sweptBounds({...p,oldX:p.x,oldS:p.s});
+        const agentBounds=sweptBounds({...b,x:a.x,oldX:a.x,oldS:b.s});
+        if (playerBounds.minS>agentBounds.maxS+.15) {
+          a.near=true; this.closePasses.delete(a.id);
+          if (!pass.touched && !playerTouched && pass.clearance>=.08 && pass.clearance<=.85 && player.velocityS>12 && player.velocityS-b.vs>2) {
+            this.nearMisses++; near=true; boost=player.boostClosePass() || boost;
+          }
+        } else if (a.s-player.s>30) this.closePasses.delete(a.id);
+      }
     });
     const active = this.activePolice;
     this.level = active.length ? Math.min(5, 1 + Math.floor(Math.max((this.joins - 1) * .8, active[0].pursuitTime / 100))) : 0;
@@ -157,8 +273,9 @@ export class Traffic {
     // Active units persist; patrol/traffic recycling occurs beyond the rear view or in haze.
     const removed = this.agents.filter(a => !a.active && (a.s < player.s - 650 || a.s > player.s + 1700));
     this.agents = this.agents.filter(a => !removed.includes(a));
-    for (const a of removed) this.spawn(player.s, a.id);
+    for (const a of removed) { this.policeVehicles.delete(a.id); this.closePasses.delete(a.id); this.scoreContacts.delete(a.id); this.ramCooldown.delete(a.id); this.refusedRoutes.delete(a.id); this.passing.delete(a.id); this.spawn(player.s, a.id); }
     for (const [key, time] of this.contacts) if (elapsed - time > 5) this.contacts.delete(key);
-    return { hit, near, contacts: impacts, joined: this.joins - beforeJoins };
+    for(const [id,time]of this.scoreContacts)if(elapsed-time>5)this.scoreContacts.delete(id);
+    return { hit, near, boost, touching:playerTouched, contacts: impacts, scoreHits, joined: this.joins - beforeJoins };
   }
 }

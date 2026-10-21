@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Vehicle, sweptHit, steeringLimit } from '../src/drive/vehicle';
-import { STEP, neutral } from '../src/drive/config';
+import { LANES, STEP, neutral } from '../src/drive/config';
 import { RoadGraph, originFor, sceneZ } from '../src/drive/road';
 import { Traffic } from '../src/drive/traffic';
 import { Records } from '../src/drive/storage';
@@ -27,13 +27,14 @@ describe('driving dynamics', () => {
     run(wet, 2, { ...neutral(), throttle: 1, steer: 1, handbrake: true });
     expect(wet.slip).toBeGreaterThan(.2); expect(wet.x).toBeLessThanOrEqual(15.45);
   });
-  it('settles a highway lane change without steering the car into a fixed lane', () => {
-    const car = new Vehicle(); car.speed = 35;
-    run(car, .3, { ...neutral(), steer: 1 }); const turningYaw = car.yaw;
-    run(car, .05); expect(car.yaw).toBeGreaterThan(turningYaw);
-    run(car, .35); expect(car.yaw).toBeLessThan(turningYaw); run(car, 3);
-    expect(Math.abs(car.yaw)).toBeLessThan(.025); expect(car.damage).toBe(0);
-    expect(car.x).toBeGreaterThan(7); expect(car.x).toBeLessThan(13.8);
+  it('centers the wheels while preserving the chosen heading after steering is released', () => {
+    for(const direction of [-1,1]){
+      const car=new Vehicle();car.x=8.35;car.speed=20;
+      run(car,.2,{...neutral(),steer:direction});run(car,.4);
+      const heading=car.yaw,x=car.x;expect(heading*direction).toBeGreaterThan(.04);
+      run(car,1);expect(Math.abs(car.yaw-heading)).toBeLessThan(.004);
+      expect((car.x-x)*direction).toBeGreaterThan(.7);expect(Math.abs(car.steering)).toBeLessThan(.001);expect(car.damage).toBe(0);
+    }
   });
   it.each([12, 30, 60])('responds promptly in either direction at %s m/s while accelerating', speed => {
     for (const direction of [-1, 1]) {
@@ -98,11 +99,12 @@ describe('road graph and precision', () => {
   it('connects each service loop to the highway at explicit endpoints', () => {
     const graph = new RoadGraph();
     for (let i = 0; i < 100; i++) {
-      const exit = i * 3000 + 800; expect(graph.branchCenter(exit)).toBeCloseTo(14);
-      expect(graph.branchCenter(exit + 900)).toBeCloseTo(14); expect(graph.branchCenter(exit + 450)).toBeCloseTo(29);
+      const exit = i * 3000 + 800; expect(graph.branchCenter(exit)).toBeCloseTo(LANES[3]);
+      expect(graph.branchCenter(exit + 900)).toBeCloseTo(LANES[3]); expect(graph.branchCenter(exit + 450)).toBeCloseTo(32);
       expect(graph.routeAt(exit + 450)?.rejoin).toBe(exit + 900);
-      let previous = 14;
-      for (let d = 0; d <= 900; d++) { const center = graph.branchCenter(exit + d)!; expect(Math.abs(center - previous)).toBeLessThan(.06); expect(graph.constrain(center, exit + d)).toBe(center); previous = center; }
+      expect(graph.validateNetwork(i)).toEqual([]);
+      let previous = LANES[3];
+      for (let d = 0; d <= 900; d++) { const center = graph.branchCenter(exit + d)!; expect(Math.abs(center - previous)).toBeLessThan(.16); expect(graph.constrain(center, exit + d)).toBe(center); previous = center; }
     }
   });
   it('drives the complete detour with the same steering dynamics and rejoins', () => {

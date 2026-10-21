@@ -23,6 +23,10 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          lfs: true
+      - name: Verify downloaded LFS media
+        run: git lfs fsck
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -38,6 +42,23 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Verify production gameplay and repository paths in Chromium
         run: npm run test:browser
+      - name: Preserve browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-failure-diagnostics
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Explain blocked deployment
+        if: failure()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
+          The build or browser checks failed, so this workflow has not deployed a new Pages artifact.
+          Resolve the failing check and rerun this workflow. Browser screenshots, traces and error context are attached when available.
+          Pages must use **Settings → Pages → Source → GitHub Actions**. A branch/root deployment serves src/main.ts as video/mp2t and misses public/favicon.svg.
+          A successful deployment publishes only the compiled dist folder.
+          SUMMARY
       - name: Configure Pages
         if: github.event_name != 'pull_request'
         id: pages

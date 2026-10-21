@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { buildPoliceCar, isSharedPoliceResource } from '../src/drive/police-car';
+import { buildPoliceCar, isSharedPoliceResource, POLICE_SOURCE_WHEEL_RADIUS } from '../src/drive/police-car';
 import { POLICE_SIZE } from '../src/drive/config';
 import { Traffic } from '../src/drive/traffic';
-import { policeFacePanel, policeRoof } from '../src/drive/police-body';
+import { policeFacePanel, policeRoof, policeCabinSide } from '../src/drive/police-body';
 const lamps = () => ({ head: new THREE.MeshBasicMaterial(), brake: new THREE.MeshStandardMaterial(), red: new THREE.MeshBasicMaterial(), blue: new THREE.MeshBasicMaterial() });
 
 describe('police utility SUV', () => {
@@ -22,10 +22,16 @@ describe('police utility SUV', () => {
     for (const w of rig.wheels) {
       const b = new THREE.Box3().setFromObject(w);
       expect(b.min.y).toBeCloseTo(0, 5);
-      expect(b.max.y).toBeCloseTo(2 * POLICE_SIZE.wheelRadius, 5);
+      expect(b.max.y).toBeCloseTo(2 * POLICE_SOURCE_WHEEL_RADIUS, 5);
     }
     const traffic = new Traffic('UTILITY', 'low'); traffic.reset();
     expect(traffic.agents.filter(a => a.kind === 'police').every(a => a.width === POLICE_SIZE.width && a.length === POLICE_SIZE.length)).toBe(true);
+  });
+  it('leaves the side windows and windscreen open behind the glazing',()=>{
+    const material=new THREE.MeshBasicMaterial({side:THREE.DoubleSide}),roof=new THREE.Mesh(policeRoof(),material),side=new THREE.Mesh(policeCabinSide(1),material);
+    const hits=(mesh:THREE.Mesh,from:number[],direction:number[])=>new THREE.Raycaster(new THREE.Vector3(...from),new THREE.Vector3(...direction)).intersectObject(mesh).length;
+    expect(hits(roof,[0,3,-.85],[0,-1,0])).toBe(0);expect(hits(roof,[0,3,.5],[0,-1,0])).toBeGreaterThan(0);
+    expect(hits(side,[3,1.5,0],[-1,0,0])).toBe(0);expect(hits(side,[3,1.5,.40],[-1,0,0])).toBeGreaterThan(0);
   });
   it('keeps reusable geometry bounded and finite while giving each car independent warning lights', () => {
     const firstLamps=lamps(), secondLamps=lamps(), first=buildPoliceCar(firstLamps), second=buildPoliceCar(secondLamps);

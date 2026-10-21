@@ -1,5 +1,6 @@
 import { Random } from '../core/random';
 import { clamp } from './config';
+import { overpassesAt } from './road';
 
 export const RAIN = { windX: 1.1, windZ: .45, fall: 9.5, exposure: .018 };
 export const GLASS = { width: 1.48, height: .80, baseY: .914, baseZ: -.874, upY: .455, upZ: .89 };
@@ -13,8 +14,7 @@ export function wiperSweep(time: number, index: number, reduced: boolean): numbe
   return -1.05 * progress;
 }
 export function rainSheltered(x: number, s: number): boolean {
-  const id = Math.floor(s / 120);
-  return ((id % 3) + 3) % 3 === 1 && Math.abs(s - (id * 120 + 60)) < 6.5 && Math.abs(x) < 35;
+  return overpassesAt(s).some(p => Math.abs(s - p.s) <= p.length / 2 && Math.abs(x - p.x) <= p.width / 2);
 }
 /** Camera-centred storage, world-space motion. Origin rebasing never changes rainfall velocity. */
 export class RainField {
@@ -38,7 +38,7 @@ export class RainField {
     const vx = dt > 0 ? shiftX / dt : 0, vs = dt > 0 ? shiftS / dt : 0;
     this.anchor = { x, s };
     const exposure = reduced ? .005 : RAIN.exposure;
-    const sin = Math.sin(yaw), cos = Math.cos(yaw);
+    const sin = Math.sin(yaw), cos = Math.cos(yaw), shelters = overpassesAt(s);
     for (let i = 0; i < this.count; i++) {
       const j = i * 3, k = i * 6, fall = RAIN.fall * (.83 + (i % 13) / 39);
       let px = this.heads[j] - shiftX + (reduced ? 0 : RAIN.windX * dt);
@@ -51,7 +51,7 @@ export class RainField {
       const localX = px * cos + pz * sin, localZ = -px * sin + pz * cos;
       // No falling particles inside the cabin, through the roof, or below an overpass.
       const hidden = Math.abs(localX) < 1.08 && Math.abs(localZ) < 2.5 && py < 1.4
-        || py < 12.6 && rainSheltered(x + px, s - pz);
+        || shelters.some(p => py < p.underside && Math.abs(s - pz - p.s) <= p.length / 2 && Math.abs(x + px - p.x) <= p.width / 2);
       const distance = Math.hypot(px, pz), fade = hidden ? 0 : clamp(1 - distance / 85, 0, 1) * (reduced ? .07 : .26);
       this.opacity[i * 2] = fade; this.opacity[i * 2 + 1] = fade * .16;
       this.positions.set([px, py, pz, px - (RAIN.windX - vx) * exposure, py + fall * exposure, pz - (RAIN.windZ + vs) * exposure], k);

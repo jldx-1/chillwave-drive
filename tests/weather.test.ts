@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { overpassesAt } from '../src/drive/road';
 import { RAIN, RainField, WaterFilm, rainSheltered, sweptBladeClears, wiperSweep } from '../src/drive/weather';
 
 describe('world rainfall', () => {
@@ -25,7 +26,8 @@ describe('world rainfall', () => {
     rain.update(0, 5, 1e8, 0, true);
     expect(rain.positions.length).toBe(1080); expect(Array.from(rain.positions).every(Number.isFinite)).toBe(true);
     expect(Array.from(rain.opacity).every(v => v >= 0 && v <= .260001)).toBe(true);
-    expect(rainSheltered(6.5, 180)).toBe(true); expect(rainSheltered(6.5, 200)).toBe(false); expect(rainSheltered(50, 180)).toBe(false);
+    expect(rainSheltered(6.5, 780)).toBe(true); expect(rainSheltered(6.5, 800)).toBe(false); expect(rainSheltered(50, 780)).toBe(false);
+    for (const p of overpassesAt(780)) { expect(rainSheltered(p.x, p.s)).toBe(true); expect(rainSheltered(p.x + p.width / 2 + .1, p.s)).toBe(false); expect(rainSheltered(p.x, p.s + p.length / 2 + .1)).toBe(false); }
   });
 });
 describe('windshield water and physical blades', () => {

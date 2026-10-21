@@ -10,6 +10,20 @@ assert(prefix.startsWith('/') && prefix.endsWith('/'), 'VITE_BASE_PATH must star
 const origin = 'https://pages.invalid';
 const pageURL = new URL(`${prefix}index.html`, origin);
 let checked = 0;
+// Scan every copied public asset, including media not referenced by the entry HTML.
+// A successful Vite copy alone does not prove checkout downloaded LFS content.
+async function rejectLFSPointers(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) await rejectLFSPointers(path);
+    else if (entry.isFile() && (await stat(path)).size <= 1024) {
+      const content = await readFile(path, 'utf8');
+      assert(!content.startsWith('version https://git-lfs.github.com/spec/v1'),
+        `Unresolved Git LFS pointer in Pages artifact: ${path.slice(root.length + 1)}. Run git lfs pull; CI checkout must set lfs: true.`);
+    }
+  }
+}
+await rejectLFSPointers(root);
 async function fileAt(path) {
   const file = resolve(root, path);
   assert(file.startsWith(root + sep), `Asset escapes dist: ${path}`);
@@ -41,7 +55,10 @@ for (const match of html.matchAll(/\b(?:src|href)=["']([^"']+)["']/g)) {
     for (const m of css.matchAll(/url\(\s*["']?([^"')\s]+)["']?\s*\)/g)) await asset(m[1], cssURL);
   }
 }
-for (const path of ['.nojekyll', 'models/porsche-911-gt3/model.glb', 'textures/asphalt-diff.jpg', 'textures/asphalt-normal.jpg', 'textures/asphalt-rough.jpg', 'textures/venice-sunset.hdr']) await fileAt(path);
+for (const path of ['.nojekyll', 'favicon.svg', 'models/porsche-911-gt3/model.glb', 'textures/asphalt-diff.jpg', 'textures/asphalt-normal.jpg', 'textures/asphalt-rough.jpg', 'textures/venice-sunset.hdr']) await fileAt(path);
+const vehicleAudit = JSON.parse(await readFile(await fileAt('assets/vehicles/geometry-audit.json'), 'utf8'));
+for (const spec of Object.values(vehicleAudit.files)) await fileAt(spec.path);
+for (const path of ['assets/vehicles/provenance.json','assets/vehicles/licenses/CC-BY-4.0.txt','assets/vehicles/licenses/Original-MIT.txt']) await fileAt(path);
 for (const style of ['chillwave','vaporwave']) for (const stem of ['atmosphere','bass','melody','lift']) await fileAt(`audio/${style}-${stem}.wav`);
 for (const path of ['CREDITS.md','models/porsche-911-gt3/LICENSE.md','models/car-concept/LICENSE.md']) {
   const text = await readFile(await fileAt(path), 'utf8');

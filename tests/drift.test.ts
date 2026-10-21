@@ -71,3 +71,23 @@ describe('brake drifting', () => {
     car.reset(); expect(car.driftAmount).toBe(0); expect(car.slipAngle).toBe(0); expect(car.yawRate).toBe(0);
   });
 });
+
+describe('handbrake direction reversal',()=>{
+  it.each([-1,1])('registers an opposite command immediately during a handbrake slide toward %s',direction=>{
+    const car=moving(25);run(car,.7,{...neutral(),steer:direction,handbrake:true});
+    const before={yaw:car.yaw,lateral:car.lateral};expect(car.slipAngle*direction).toBeGreaterThan(.4);
+    car.step(STEP,{...neutral(),steer:-direction,handbrake:true});
+    expect(car.steering*direction).toBeLessThan(0);expect(car.yawRate*direction).toBeLessThan(0);
+    run(car,.2,{...neutral(),steer:-direction,handbrake:true});
+    expect(car.lateral*direction).toBeLessThan(0);
+    expect((car.yaw-before.yaw)*direction).toBeLessThan(0);expect(car.damage).toBe(0);
+  });
+  it('retains its new driving direction after the handbrake and steering are released',()=>{
+    const car=moving(25);run(car,.5,{...neutral(),steer:1,handbrake:true});
+    run(car,.35,{...neutral(),steer:-1,handbrake:true});
+    // Isolate steering release from the separate barrier-impact yaw response.
+    const coast=(seconds:number)=>{for(let i=0;i<seconds/STEP;i++)car.step(STEP,neutral(),true,1,x=>x);};
+    coast(.8);const heading=car.yaw;coast(.5);
+    expect(Math.abs(car.yaw-heading)).toBeLessThan(.003);expect(car.damage).toBe(0);
+  });
+});

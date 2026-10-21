@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "runtime": "Every asset and map is local; no runtime dependence on download services.",
+  "assetContract": "metres, +Y up, nose -Z, road Y=0; named Wheel_FL/RL/FR/RR pivots and Spin child; extras.vehicleRole material roles.",
+  "vehicles": {
+    "sedan": {
+      "author": "Comrade1280 (https://sketchfab.com/comrade1280)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/generic-passenger-car-pack-20f9af9b8a404d5cb022ac6fe87f21f5",
+      "title": "Generic passenger car pack",
+      "sourceFile": "tools/vehicle-sources/generico-sedan.glb",
+      "sourceSha256": "4d3b6bd101b4998c8746a5f6d8da576e44a6d97c16ca12bdb4c2884adfef3cc7",
+      "downloadUrl": "https://raw.githubusercontent.com/pedrosoandre/carros/main/assets/generico-sedan.glb",
+      "adaptations": "Selected independent body and nearest four wheel assemblies; unrelated pack wheels removed. Dequantized before world-space baking; normalized to metres, -Z forward, Y=0 ground. Rigged independent steering pivots and spinning wheel children. Retained source maps, tuned PBR and authored normal/roughness paint detail; separated light roles and side indicators; baked indexed geometry and distinct distance LODs.",
+      "licenseText": "licenses/CC-BY-4.0.txt"
+    },
+    "suv": {
+      "author": "Comrade1280 (https://sketchfab.com/comrade1280)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/generic-passenger-car-pack-20f9af9b8a404d5cb022ac6fe87f21f5",
+      "title": "Generic passenger car pack",
+      "sourceFile": "tools/vehicle-sources/generico-suv.glb",
+      "sourceSha256": "88b46d4ecebd6b67707113514859c75fd05358fb57018a467cbbfd89ffc93a3d",
+      "downloadUrl": "https://raw.githubusercontent.com/pedrosoandre/carros/main/assets/generico-suv.glb",
+      "adaptations": "Selected independent body and nearest four wheel assemblies; unrelated pack wheels removed. Dequantized before world-space baking; normalized to metres, -Z forward, Y=0 ground. Rigged independent steering pivots and spinning wheel children. Retained source maps, tuned PBR and authored normal/roughness paint detail; separated light roles and side indicators; baked indexed geometry and distinct distance LODs.",
+      "licenseText": "licenses/CC-BY-4.0.txt"
+    },
+    "pickup": {
+      "author": "Comrade1280 (https://sketchfab.com/comrade1280)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/generic-passenger-car-pack-20f9af9b8a404d5cb022ac6fe87f21f5",
+      "title": "Generic passenger car pack",
+      "sourceFile": "tools/vehicle-sources/generico-picape.glb",
+      "sourceSha256": "59d6046fade8ac4690da87926f4ca6606b855a6f228b15e48fbc87db5e50075a",
+      "downloadUrl": "https://raw.githubusercontent.com/pedrosoandre/carros/main/assets/generico-picape.glb",
+      "adaptations": "Selected independent body and nearest four wheel assemblies; unrelated pack wheels removed. Dequantized before world-space baking; normalized to metres, -Z forward, Y=0 ground. Rigged independent steering pivots and spinning wheel children. Retained source maps, tuned PBR and authored normal/roughness paint detail; separated light roles and side indicators; baked indexed geometry and distinct distance LODs.",
+      "licenseText": "licenses/CC-BY-4.0.txt"
+    },
+    "hatchback": {
+      "author": "rifdanzz (https://sketchfab.com/rifdanzz)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/1991-honda-civic-eg6-f81da34570b145deb463fa091604d251",
+      "title": "1991 Honda Civic EG6",
+      "sourceFile": "tools/vehicle-sources/honda-civic.glb",
+      "sourceSha256": "b7f985bcb06d98291561392b1c8b8e355a62d536752a4084b756328c183a6725",
+      "downloadUrl": "https://raw.githubusercontent.com/pedrosoandre/carros/main/assets/honda-civic.glb",
+      "adaptations": "Selected independent body and nearest four wheel assemblies; unrelated pack wheels removed. Dequantized before world-space baking; normalized to metres, -Z forward, Y=0 ground. Rigged independent steering pivots and spinning wheel children. Retained source maps, tuned PBR and authored normal/roughness paint detail; separated light roles and side indicators; baked indexed geometry and distinct distance LODs.",
+      "licenseText": "licenses/CC-BY-4.0.txt"
+    },
+    "sport": {
+      "author": "Lexyc16 (https://sketchfab.com/Lexyc16)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/nissan-200sx-silvia-s14-f2a917a924734a89a020e7f970e55e7c",
+      "title": "Nissan 200SX Silvia S14",
+      "sourceFile": "tools/vehicle-sources/nissan-200sx-silvia.glb",
+      "sourceSha256": "d3e86b4af5fe2bd4a8e8b9055c0f2890018a28a4172e2135b6b1a6ec2e03478e",
+      "downloadUrl": "https://raw.githubusercontent.com/pedrosoandre/carros/main/assets/nissan-200sx-silvia.glb",
+      "adaptations": "Selected independent body and nearest four wheel assemblies; unrelated pack wheels removed. Dequantized before world-space baking; normalized to metres, -Z forward, Y=0 ground. Rigged independent steering pivots and spinning wheel children. Retained source maps, tuned PBR and authored normal/roughness paint detail; separated light roles and side indicators; baked indexed geometry and distinct distance LODs.",
+      "licenseText": "licenses/CC-BY-4.0.txt"
+    },
+    "police": {
+      "author": "Chillwave Drive contributors",
+      "license": "MIT",
+      "licenseText": "licenses/Original-MIT.txt",
+      "sourceFile": "tools/vehicle-author.ts",
+      "source": "src/drive/police-car.ts and src/drive/police-body.ts",
+      "adaptations": "Original offline authored mesh geometry, glass, PBR paint, mapped microdetail, lamps and spinning wheels, exported to self-contained GLBs. Police utility SUV includes fleet livery, push bumper, steel wheels, seats/dashboard/steering. Delivery truck includes a distinct cab, cargo box, mirrors, grille and shutter.",
+      "artQuality": "Original game-ready browser model; not a manufacturer asset or commercial racing-game production model."
+    },
+    "truck": {
+      "author": "Chillwave Drive contributors",
+      "license": "MIT",
+      "licenseText": "licenses/Original-MIT.txt",
+      "sourceFile": "tools/vehicle-author.ts",
+      "source": "tools/vehicle-author.ts originalTruck()",
+      "adaptations": "Original offline authored mesh geometry, glass, PBR paint, mapped microdetail, lamps and spinning wheels, exported to self-contained GLBs. Police utility SUV includes fleet livery, push bumper, steel wheels, seats/dashboard/steering. Delivery truck includes a distinct cab, cargo box, mirrors, grille and shutter.",
+      "artQuality": "Original game-ready browser model; not a manufacturer asset or commercial racing-game production model."
+    },
+    "player": {
+      "author": "ChevroletSS (https://sketchfab.com/ChevroletSS)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/porsche-911-gt3-78d5c47ab2554c2592b7e499179a0792",
+      "title": "Porsche 911 GT3",
+      "downloadUrl": "https://raw.githubusercontent.com/pedrosoandre/carros/main/assets/porsche-911-gt3.glb",
+      "sha256": "4058dc7aa3c2ad27f230c1ac77fe4bc253930aeacffeab48371360c557456718",
+      "adaptations": "Original model decoded, uniformly normalized and indexed; original detailed cockpit and independent wheel/caliper, steering, wiper and mirror rigs exported in canonical metre units. Cyan physical paint, tuned lamps, driver-eye metadata and original mirror UVs retained.",
+      "sourceFile": "public/models/porsche-911-gt3/model.glb",
+      "sourceSha256": "4058dc7aa3c2ad27f230c1ac77fe4bc253930aeacffeab48371360c557456718",
+      "licenseText": "licenses/CC-BY-4.0.txt"
+    }
+  },
+  "runtimeCorrections": "Corrected the generic pack to -Z forward; separated shared coupe head/reverse optics; fitted supplemental signals by raycasting the actual body skin; kept source police wheel dimensions independent of measured exports; cut police/truck window apertures and truck wheel arches; cleared steps/ribs and mounted rear truck lamps. Canonical pivots bind as Object3D nodes returned by GLTFLoader."
+}

@@ -2,12 +2,13 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { PLAYER_ASSET_PATH } from './vehicle-catalog';
 
 let loaded: Promise<THREE.Group> | undefined;
 /** Locally served, attributed ChevroletSS GT3; decode only once per page. */
 export function playerCarAsset(): Promise<THREE.Group> {
   if (!loaded) loaded = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
-    .loadAsync(`${import.meta.env.BASE_URL}models/porsche-911-gt3/model.glb`).then(g => g.scene);
+    .loadAsync(import.meta.env.BASE_URL + PLAYER_ASSET_PATH).then(g => g.scene);
   return loaded;
 }
 export interface PlayerCarRig {
@@ -19,7 +20,7 @@ export interface PlayerCarRig {
   windows: THREE.MeshPhysicalMaterial[]; unique: THREE.Material[]; owned: THREE.BufferGeometry[];
 }
 export async function buildPlayerCar(color: string): Promise<PlayerCarRig> {
-  return rigPlayerCar(await playerCarAsset(), color);
+  return rigCanonicalPlayer(await playerCarAsset(), color);
 }
 
 /** Bake the source transforms, keeping wheels, calipers, steering and wipers independent. */
@@ -170,4 +171,50 @@ export function rigPlayerCar(source: THREE.Group, color: string): PlayerCarRig {
   // The real left-hand driver seat, comfortably below the curved coupe roof.
   const eye = new THREE.Vector3(-.335 * scale, 1.045 * scale, .10 * scale);
   return { scale, group, wheels, spins, steering, wipers, eye, mirror, sideMirrors, damage, paint, lamps, headlamps, windows, unique, owned };
+}
+
+/** Restore the authored canonical GT3 rig without rebuilding or rescaling its coachwork. */
+export function rigCanonicalPlayer(source: THREE.Group, color: string): PlayerCarRig {
+  const copy = source.clone(true), roots: THREE.Group[] = [];
+  copy.traverse(o => { if (o.userData.playerRig) roots.push(o as THREE.Group); });
+  const group = roots[0]; if (!group) throw new Error('Player GLB has no canonical rig metadata');
+  group.removeFromParent();
+  const damage = { value: 0 }, unique: THREE.Material[] = [], paint: THREE.MeshPhysicalMaterial[] = [];
+  const lamps: THREE.MeshStandardMaterial[] = [], headlamps: THREE.MeshStandardMaterial[] = [], windows: THREE.MeshPhysicalMaterial[] = [];
+  const cache = new Map<THREE.Material, THREE.MeshPhysicalMaterial>();
+  group.traverse(o => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const material = (original: THREE.Material) => {
+      let m = cache.get(original); if (m) return m;
+      m = original instanceof THREE.MeshPhysicalMaterial ? original.clone() : new THREE.MeshPhysicalMaterial();
+      if (!(original instanceof THREE.MeshPhysicalMaterial) && original instanceof THREE.MeshStandardMaterial) THREE.MeshStandardMaterial.prototype.copy.call(m, original);
+      m.userData = { ...original.userData };
+      const role = String(m.userData.vehicleRole ?? '');
+      if (role === 'paint' || /Carpaint/i.test(m.name)) {
+        m.color.set(color); m.metalness = .72; m.roughness = .21; m.clearcoat = 1; m.clearcoatRoughness = .075; paint.push(m);
+        m.onBeforeCompile = shader => {
+          shader.uniforms.damageAmount = damage;
+          shader.vertexShader = 'varying vec3 carSurface;\n' + shader.vertexShader;
+          shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ncarSurface=position;');
+          shader.fragmentShader = 'varying vec3 carSurface; uniform float damageAmount;\n' + shader.fragmentShader;
+          shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\nfloat scratch=step(.965,fract(carSurface.z*43.+sin(carSurface.y*72.)))*step(.45,damageAmount)*step(carSurface.y,.75);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.29,.31,.33),scratch*damageAmount*.7);');
+          shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nvec2 cells=carSurface.xz*150.;vec2 bead=fract(cells)-.5;float water=smoothstep(.24,.06,length(bead))*step(.978,fract(sin(dot(floor(cells),vec2(12.9898,78.233)))*43758.5453));normal=normalize(normal+vec3(bead*water*.14,0.));roughnessFactor=mix(roughnessFactor,.08,water);');
+        };
+      }
+      if (role === 'window' || /EXT_Glass_Windows/.test(m.name)) windows.push(m);
+      if (role === 'head') headlamps.push(m);
+      if (role === 'brake') lamps.push(m);
+      unique.push(m); cache.set(original, m); return m;
+    };
+    o.material = Array.isArray(o.material) ? o.material.map(material) : material(o.material);
+    o.castShadow = !(Array.isArray(o.material) ? o.material.some(m => m.transparent) : o.material.transparent); o.receiveShadow = true;
+  });
+  const get = (name: string) => { const node = group.getObjectByName(name); if (!node) throw new Error('Missing player rig node ' + name); return node; };
+  const wheels = ['Wheel_FL', 'Wheel_RL', 'Wheel_FR', 'Wheel_RR'].map(name => get(name) as THREE.Group);
+  const spins = wheels.map(w => (w.getObjectByName('Spin') ?? w.children[0]) as THREE.Group);
+  const mirrorGeometry = (name: string) => { const node = get(name) as THREE.Mesh; node.removeFromParent(); return node.geometry; };
+  return { group, scale: Number(group.userData.scale), eye: new THREE.Vector3().fromArray(group.userData.eye),
+    wheels, spins, steering: get('Steering') as THREE.Group, wipers: [get('Wiper_0'), get('Wiper_1')] as THREE.Group[],
+    mirror: mirrorGeometry('Mirror_Center'), sideMirrors: [mirrorGeometry('Mirror_Left'), mirrorGeometry('Mirror_Right')],
+    damage, paint, lamps, headlamps, windows, unique, owned: [] };
 }

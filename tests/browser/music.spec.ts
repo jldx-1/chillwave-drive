@@ -12,6 +12,9 @@ declare global { interface Window { audioQA: AudioQA } }
 
 // Observe real Web Audio nodes; the production game exposes no testing API.
 async function observeAudio(page: import('@playwright/test').Page) {
+  // Web Audio retains its native clock. Render only when a positional observation needs a frame.
+  await page.setViewportSize({width:800,height:500});
+  await page.clock.install();await page.clock.pauseAt(new Date());
   await page.addInitScript(() => {
     const qa: AudioQA = window.audioQA = { contexts: [], panners: [], gains: [], sources: [], starts: [] };
     const NativeContext = window.AudioContext;
@@ -65,7 +68,7 @@ test('music unlocks on Play, loops on a shared clock, and resumes without new so
     return { jump: Math.abs(result[boundary] - result[boundary - 1]), energy: energy / 400 };
   });
   expect(loop.jump).toBeLessThan(.08); expect(loop.energy).toBeGreaterThan(.00001);
-  await page.getByRole('button', { name: 'Pause drive' }).click();
+  await page.getByRole('button', { name: 'Pause drive' }).click();await page.clock.fastForward(120);
   await expect.poll(() => page.evaluate(() => window.audioQA.contexts[0].state)).toBe('suspended');
   const paused = await page.evaluate(() => window.audioQA.contexts[0].currentTime);
   await page.waitForTimeout(250);
@@ -86,7 +89,7 @@ test('independent audio controls, style crossfades, disable, and persistence wor
   await page.goto('/?seed=MUSIC');
   await page.getByRole('button', { name: 'START DRIVE' }).click();
   await expect.poll(() => page.evaluate(() => window.audioQA.starts.filter(s => s.duration > 20).length)).toBe(4);
-  await page.getByRole('button', { name: 'Pause drive' }).click();
+  await page.getByRole('button', { name: 'Pause drive' }).click();await page.clock.fastForward(120);
   await page.getByRole('button', { name: 'AUDIO & GRAPHICS', exact: true }).click();
   await expect(page.getByLabel('Music style')).toHaveValue('chillwave');
   await setSlider(page, 'Music volume', '.25'); await setSlider(page, 'Sound effects volume', '.1');
@@ -98,7 +101,7 @@ test('independent audio controls, style crossfades, disable, and persistence wor
   const volumes = await page.evaluate(() => window.audioQA.gains.slice(1, 3).map(g => g.gain.value));
   expect(volumes[0]).toBeCloseTo(.1, 2); expect(volumes[1]).toBeCloseTo(.25, 1);
   expect(await page.evaluate(() => window.audioQA.starts.filter(s => s.duration > 20).length)).toBe(8);
-  await page.getByRole('button', { name: 'Pause drive' }).click();
+  await page.getByRole('button', { name: 'Pause drive' }).click();await page.clock.fastForward(120);
   await page.getByRole('button', { name: 'AUDIO & GRAPHICS', exact: true }).click();
   await page.getByLabel('Music enabled', { exact: true }).uncheck();
   await page.getByRole('button', { name: 'ALL SET' }).click();
@@ -117,7 +120,7 @@ test('independent audio controls, style crossfades, disable, and persistence wor
 test('patrols are silent and an alerted unit gets a real position-bound siren',async({page})=>{
   await observeAudio(page);await page.goto('/?qa&seed=CAPTURE');await page.getByRole('button',{name:'START DRIVE'}).click();
   expect(await page.evaluate(()=>window.audioQA.panners.length)).toBe(6);
-  await page.keyboard.down('w');await page.evaluate(()=>window.__drive.advance(16));await page.keyboard.up('w');
+  await page.keyboard.down('w');await page.evaluate(()=>window.__drive.advance(16));await page.keyboard.up('w');await page.clock.runFor(17);
   await expect.poll(()=>page.evaluate(()=>window.audioQA.panners.length)).toBeGreaterThan(6);
   const spatial=await page.evaluate(()=>{const state=window.__drive.inspect(),unit=state.agents.find(a=>a.kind==='police'&&a.active)!;return {panners:window.audioQA.panners.slice(6).map(p=>({x:p.positionX.value,z:p.positionZ.value})),unit,origin:state.origin};});
   expect(spatial.panners.some(p=>Math.abs(p.x-spatial.unit.x)<.5&&Math.abs(p.z+(spatial.unit.s-spatial.origin))<2)).toBe(true);

@@ -9,6 +9,7 @@ export default defineConfig({
     viewport: { width: 1280, height: 800 },
     launchOptions: { args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--disable-dev-shm-usage'] },
     screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
   },
   webServer: [{
     command: 'npm run preview -- --port 4173',

@@ -1,0 +1,729 @@
+{
+  "generatedBy": "tools/vehicle-export.mjs",
+  "frame": "metres, +Y up, -Z forward, road Y=0",
+  "files": {
+    "sedan": {
+      "path": "assets/vehicles/traffic/sedan.glb",
+      "sha256": "d776df09a5aecc3060207a930f316031553fb5a0135ff5d67bd10c5388105f8f",
+      "bytes": 1856452,
+      "length": 4.800000190734863,
+      "width": 2.1459150314331055,
+      "height": 1.4764459133148193,
+      "wheelRadius": 0.33791879197815433,
+      "wheelbase": 2.8823193311691284,
+      "triangles": 4541,
+      "meshes": 12,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.0729575157165527,
+          0,
+          -2.4000000953674316
+        ],
+        "max": [
+          1.0729575157165527,
+          1.4764459133148193,
+          2.4000000953674316
+        ]
+      }
+    },
+    "sedan-lod1": {
+      "path": "assets/vehicles/traffic/sedan-lod1.glb",
+      "sha256": "1be111a7048527a69b101cc68ef7e9a70ff6ac970f6d1d5f7ce843220c3769d9",
+      "bytes": 1814300,
+      "length": 4.800000190734863,
+      "width": 2.1447434425354004,
+      "height": 1.4729301929473877,
+      "wheelRadius": 0.33791879197815433,
+      "wheelbase": 2.8823193311691284,
+      "triangles": 3707,
+      "meshes": 12,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.0723717212677002,
+          0,
+          -2.4000000953674316
+        ],
+        "max": [
+          1.0723717212677002,
+          1.4729301929473877,
+          2.4000000953674316
+        ]
+      }
+    },
+    "sedan-lod2": {
+      "path": "assets/vehicles/traffic/sedan-lod2.glb",
+      "sha256": "95f5d7d48c30ca0ff4248536c34ee39d40c2e2a73c42ea54ad8a697a5c8f5231",
+      "bytes": 102580,
+      "length": 4.800000190734863,
+      "width": 2.1385905742645264,
+      "height": 1.4298624992370605,
+      "wheelRadius": 0.33791879197815433,
+      "wheelbase": 2.8823193311691284,
+      "triangles": 1310,
+      "meshes": 8,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake"
+      ],
+      "bounds": {
+        "min": [
+          -1.0729575157165527,
+          0,
+          -2.4000000953674316
+        ],
+        "max": [
+          1.0656330585479736,
+          1.4298624992370605,
+          2.4000000953674316
+        ]
+      }
+    },
+    "suv": {
+      "path": "assets/vehicles/traffic/suv.glb",
+      "sha256": "f72db91aa149a183efaa042c62b6e17032ac507b80042dec6e8995d59dd39b88",
+      "bytes": 1906940,
+      "length": 4.849999904632568,
+      "width": 2.175373077392578,
+      "height": 1.8236331939697266,
+      "wheelRadius": 0.39549243450164795,
+      "wheelbase": 2.8729880452156067,
+      "triangles": 4800,
+      "meshes": 16,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.087686538696289,
+          0,
+          -2.424999952316284
+        ],
+        "max": [
+          1.087686538696289,
+          1.8236331939697266,
+          2.424999952316284
+        ]
+      }
+    },
+    "suv-lod1": {
+      "path": "assets/vehicles/traffic/suv-lod1.glb",
+      "sha256": "faba4a691ad9819cb9c367adb050383d94d90f83306f8217e1a88043670979db",
+      "bytes": 1865648,
+      "length": 4.849999904632568,
+      "width": 2.174781084060669,
+      "height": 1.8236331939697266,
+      "wheelRadius": 0.39549243450164795,
+      "wheelbase": 2.8729880452156067,
+      "triangles": 3880,
+      "meshes": 16,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.0873905420303345,
+          0,
+          -2.424999952316284
+        ],
+        "max": [
+          1.0873905420303345,
+          1.8236331939697266,
+          2.424999952316284
+        ]
+      }
+    },
+    "suv-lod2": {
+      "path": "assets/vehicles/traffic/suv-lod2.glb",
+      "sha256": "f98afce3e62663c4b432cef28d01b2364a37d872faa065c144669fe7ebd83edf",
+      "bytes": 125700,
+      "length": 4.808555841445923,
+      "width": 2.1582034826278687,
+      "height": 1.8215609788894653,
+      "wheelRadius": 0.39549243450164795,
+      "wheelbase": 2.8729880452156067,
+      "triangles": 1624,
+      "meshes": 12,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake"
+      ],
+      "bounds": {
+        "min": [
+          -1.0779175758361816,
+          0,
+          -2.424999952316284
+        ],
+        "max": [
+          1.080285906791687,
+          1.8215609788894653,
+          2.3835558891296387
+        ]
+      }
+    },
+    "pickup": {
+      "path": "assets/vehicles/traffic/pickup-truck.glb",
+      "sha256": "7620acf874bdaf63d38dd5c62f5f6f328dabbabff4a516a164e57e3c9f46f43d",
+      "bytes": 1986184,
+      "length": 5.699999809265137,
+      "width": 2.28316593170166,
+      "height": 1.8681414127349854,
+      "wheelRadius": 0.4150866866111758,
+      "wheelbase": 3.527375638484955,
+      "triangles": 4321,
+      "meshes": 12,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.14158296585083,
+          0,
+          -2.8499999046325684
+        ],
+        "max": [
+          1.14158296585083,
+          1.8681414127349854,
+          2.8499999046325684
+        ]
+      }
+    },
+    "pickup-lod1": {
+      "path": "assets/vehicles/traffic/pickup-truck-lod1.glb",
+      "sha256": "59907d9fbcf8b572ea985d496e3197f5b732ba78662760c74a6f7f50f81ae25f",
+      "bytes": 1950088,
+      "length": 5.699999809265137,
+      "width": 2.282470226287842,
+      "height": 1.8566603660583496,
+      "wheelRadius": 0.4150866866111758,
+      "wheelbase": 3.527375638484955,
+      "triangles": 3685,
+      "meshes": 12,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.141235113143921,
+          0,
+          -2.8499999046325684
+        ],
+        "max": [
+          1.141235113143921,
+          1.8566603660583496,
+          2.8499999046325684
+        ]
+      }
+    },
+    "pickup-lod2": {
+      "path": "assets/vehicles/traffic/pickup-truck-lod2.glb",
+      "sha256": "f113e2c98f6e4e383baa9352c122a949addb29d2aeafeadc593a402aaba3e624",
+      "bytes": 93388,
+      "length": 5.699999809265137,
+      "width": 2.2720327377319336,
+      "height": 1.8566603660583496,
+      "wheelRadius": 0.4150866866111758,
+      "wheelbase": 3.527375638484955,
+      "triangles": 1184,
+      "meshes": 8,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake"
+      ],
+      "bounds": {
+        "min": [
+          -1.1304497718811035,
+          0,
+          -2.8499999046325684
+        ],
+        "max": [
+          1.14158296585083,
+          1.8566603660583496,
+          2.8499999046325684
+        ]
+      }
+    },
+    "hatchback": {
+      "path": "assets/vehicles/traffic/hatchback.glb",
+      "sha256": "cdacfabd93c91f61e4c66cb5b300fdec31133386c204623dc67305894e109e8b",
+      "bytes": 1359412,
+      "length": 4.25,
+      "width": 1.8695626258850098,
+      "height": 1.37811279296875,
+      "wheelRadius": 0.29957884550094604,
+      "wheelbase": 2.676845133304596,
+      "triangles": 18293,
+      "meshes": 26,
+      "roles": [
+        "tire",
+        "metal",
+        "trim",
+        "paint",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -0.9347813129425049,
+          0,
+          -2.125
+        ],
+        "max": [
+          0.9347813129425049,
+          1.37811279296875,
+          2.125
+        ]
+      }
+    },
+    "hatchback-lod1": {
+      "path": "assets/vehicles/traffic/hatchback-lod1.glb",
+      "sha256": "6281ad8e3cf64d7322a11fe5b9578d85ddcb49007d0517a18d2f8ee1aba56d29",
+      "bytes": 1059800,
+      "length": 4.25,
+      "width": 1.8695626258850098,
+      "height": 1.347049593925476,
+      "wheelRadius": 0.29957884550094604,
+      "wheelbase": 2.676845133304596,
+      "triangles": 11650,
+      "meshes": 26,
+      "roles": [
+        "tire",
+        "metal",
+        "trim",
+        "paint",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -0.9347813129425049,
+          0,
+          -2.125
+        ],
+        "max": [
+          0.9347813129425049,
+          1.347049593925476,
+          2.125
+        ]
+      }
+    },
+    "hatchback-lod2": {
+      "path": "assets/vehicles/traffic/hatchback-lod2.glb",
+      "sha256": "78b6494874332d2b2e980001cbeaf76818aa45d1526ad2bb05cbc03acb625261",
+      "bytes": 261976,
+      "length": 4.25,
+      "width": 1.8695626258850098,
+      "height": 1.3767231106758118,
+      "wheelRadius": 0.29957884550094604,
+      "wheelbase": 2.676845133304596,
+      "triangles": 3340,
+      "meshes": 13,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake"
+      ],
+      "bounds": {
+        "min": [
+          -0.9347813129425049,
+          0.0013896822929382324,
+          -2.125
+        ],
+        "max": [
+          0.9347813129425049,
+          1.37811279296875,
+          2.125
+        ]
+      }
+    },
+    "sport": {
+      "path": "assets/vehicles/traffic/sports-coupe.glb",
+      "sha256": "d5eb118221460b34828e1a448e5011fd350864cbb98bab68c7d476837ff8b66e",
+      "bytes": 1139312,
+      "length": 4.599999904632568,
+      "width": 1.9456582069396973,
+      "height": 1.312429428100586,
+      "wheelRadius": 0.3335053313300591,
+      "wheelbase": 2.569105863571167,
+      "triangles": 12224,
+      "meshes": 28,
+      "roles": [
+        "tire",
+        "trim",
+        "metal",
+        "paint",
+        "glass",
+        "brake",
+        "head",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -0.9728291034698486,
+          0,
+          -2.299999952316284
+        ],
+        "max": [
+          0.9728291034698486,
+          1.312429428100586,
+          2.299999952316284
+        ]
+      }
+    },
+    "sport-lod1": {
+      "path": "assets/vehicles/traffic/sports-coupe-lod1.glb",
+      "sha256": "030061891d7022b6ee566661e616444031476795d31812a8af777d390c963625",
+      "bytes": 1083636,
+      "length": 4.599999904632568,
+      "width": 1.9376455545425415,
+      "height": 1.2877670526504517,
+      "wheelRadius": 0.3335053313300591,
+      "wheelbase": 2.569105863571167,
+      "triangles": 10507,
+      "meshes": 28,
+      "roles": [
+        "tire",
+        "trim",
+        "metal",
+        "paint",
+        "glass",
+        "brake",
+        "head",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -0.9688228964805603,
+          0,
+          -2.299999952316284
+        ],
+        "max": [
+          0.9688226580619812,
+          1.2877670526504517,
+          2.299999952316284
+        ]
+      }
+    },
+    "sport-lod2": {
+      "path": "assets/vehicles/traffic/sports-coupe-lod2.glb",
+      "sha256": "349093cfa9d7c4ac51a3df12cb5ede67d525213f38033c6fba1f271ee3222691",
+      "bytes": 817292,
+      "length": 4.5985987186431885,
+      "width": 1.9388494491577148,
+      "height": 1.2877670526504517,
+      "wheelRadius": 0.3335053313300591,
+      "wheelbase": 2.569105863571167,
+      "triangles": 2750,
+      "meshes": 10,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "brake",
+        "head"
+      ],
+      "bounds": {
+        "min": [
+          -0.9700267910957336,
+          0,
+          -2.299999952316284
+        ],
+        "max": [
+          0.9688226580619812,
+          1.2877670526504517,
+          2.2985987663269043
+        ]
+      }
+    },
+    "truck": {
+      "path": "assets/vehicles/traffic/box-truck.glb",
+      "sha256": "84d5a4ee0eb5fa3e57ad371f39bc80d18348340e9ed2597e452e0a4f9ac3ff82",
+      "bytes": 1475048,
+      "length": 7.400000095367432,
+      "width": 2.8570258617401123,
+      "height": 3.397135019302368,
+      "wheelRadius": 0.4643929191242538,
+      "wheelbase": 4.472305640001343,
+      "triangles": 50324,
+      "meshes": 42,
+      "roles": [
+        "tire",
+        "metal",
+        "paint",
+        "trim",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.4285129308700562,
+          0,
+          -3.700000047683716
+        ],
+        "max": [
+          1.4285129308700562,
+          3.397135019302368,
+          3.700000047683716
+        ]
+      }
+    },
+    "truck-lod1": {
+      "path": "assets/vehicles/traffic/box-truck-lod1.glb",
+      "sha256": "551b4e02431ad1d532a343c3ac2524b782a920219d00186c08cb69cbf5e6816f",
+      "bytes": 1046716,
+      "length": 7.400000095367432,
+      "width": 2.8570258617401123,
+      "height": 3.397135019302368,
+      "wheelRadius": 0.4643929191242538,
+      "wheelbase": 4.472305640001343,
+      "triangles": 32205,
+      "meshes": 42,
+      "roles": [
+        "tire",
+        "metal",
+        "paint",
+        "trim",
+        "glass",
+        "head",
+        "brake",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.4285129308700562,
+          0,
+          -3.700000047683716
+        ],
+        "max": [
+          1.4285129308700562,
+          3.397135019302368,
+          3.700000047683716
+        ]
+      }
+    },
+    "truck-lod2": {
+      "path": "assets/vehicles/traffic/box-truck-lod2.glb",
+      "sha256": "11c0c28f052f3d9079ed487b1e9f8bd1fc77671dd6d617a640a4ce6dcb8536c6",
+      "bytes": 247096,
+      "length": 7.400000095367432,
+      "width": 2.8570258617401123,
+      "height": 3.397135019302368,
+      "wheelRadius": 0.4643929191242538,
+      "wheelbase": 4.472305640001343,
+      "triangles": 3954,
+      "meshes": 8,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "head",
+        "brake"
+      ],
+      "bounds": {
+        "min": [
+          -1.4285129308700562,
+          0,
+          -3.700000047683716
+        ],
+        "max": [
+          1.4285129308700562,
+          3.397135019302368,
+          3.700000047683716
+        ]
+      }
+    },
+    "police": {
+      "path": "assets/vehicles/police/police-suv.glb",
+      "sha256": "b79a0b6108d28a4b912e6641100d99436ab234366809ff93603b934726528388",
+      "bytes": 6664004,
+      "length": 5.349999904632568,
+      "width": 2.458176851272583,
+      "height": 2.0617294311523438,
+      "wheelRadius": 0.4130960896067699,
+      "wheelbase": 3.0701709285344405,
+      "triangles": 78680,
+      "meshes": 35,
+      "roles": [
+        "tire",
+        "metal",
+        "trim",
+        "paint",
+        "glass",
+        "brake",
+        "head",
+        "red",
+        "blue",
+        "interior",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.2290884256362915,
+          0,
+          -2.674999952316284
+        ],
+        "max": [
+          1.2290884256362915,
+          2.0617294311523438,
+          2.674999952316284
+        ]
+      }
+    },
+    "police-lod1": {
+      "path": "assets/vehicles/police/police-suv-lod1.glb",
+      "sha256": "5175d05f3b046832b50845dd9b594786943b8f4821cbfb17a195c60df41dd689",
+      "bytes": 5692004,
+      "length": 5.349999904632568,
+      "width": 2.458176851272583,
+      "height": 2.0617294311523438,
+      "wheelRadius": 0.4130960896067699,
+      "wheelbase": 3.0701709285344405,
+      "triangles": 65558,
+      "meshes": 35,
+      "roles": [
+        "tire",
+        "metal",
+        "trim",
+        "paint",
+        "glass",
+        "brake",
+        "head",
+        "red",
+        "blue",
+        "interior",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.2290884256362915,
+          0,
+          -2.674999952316284
+        ],
+        "max": [
+          1.2290884256362915,
+          2.0617294311523438,
+          2.674999952316284
+        ]
+      }
+    },
+    "police-lod2": {
+      "path": "assets/vehicles/police/police-suv-lod2.glb",
+      "sha256": "88142d27c6a5cf4d563a1d584198f69e0ec1a6c9d7cf7d18623dca832679e3ba",
+      "bytes": 268000,
+      "length": 5.349999904632568,
+      "width": 2.458176851272583,
+      "height": 2.0566435282209277,
+      "wheelRadius": 0.4130960896067699,
+      "wheelbase": 3.0701709285344405,
+      "triangles": 3374,
+      "meshes": 11,
+      "roles": [
+        "tire",
+        "paint",
+        "glass",
+        "brake",
+        "head",
+        "red",
+        "blue"
+      ],
+      "bounds": {
+        "min": [
+          -1.2290884256362915,
+          0.00508590293141592,
+          -2.674999952316284
+        ],
+        "max": [
+          1.2290884256362915,
+          2.0617294311523438,
+          2.674999952316284
+        ]
+      }
+    },
+    "player": {
+      "path": "assets/vehicles/player/sports-car.glb",
+      "sha256": "566b53ee2a4884037322e757083f692f490004562bf840e92c01357859798211",
+      "bytes": 2799752,
+      "length": 4.599999904632568,
+      "width": 2.0014498233795166,
+      "height": 1.3156205341219902,
+      "wheelRadius": 0.3621719852089882,
+      "wheelbase": 2.4779016971588135,
+      "triangles": 102924,
+      "meshes": 87,
+      "roles": [
+        "metal",
+        "tire",
+        "trim",
+        "brake",
+        "head",
+        "paint",
+        "glass",
+        "turn"
+      ],
+      "bounds": {
+        "min": [
+          -1.0007249116897583,
+          0.01213742047548294,
+          -2.299999952316284
+        ],
+        "max": [
+          1.0007249116897583,
+          1.3277579545974731,
+          2.299999952316284
+        ]
+      }
+    }
+  }
+}
