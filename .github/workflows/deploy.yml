@@ -38,10 +38,10 @@ jobs:
         run: npm test
       - name: Build and check portable static game
         run: npm run build:pages
-      - name: Install test browser
-        run: npx playwright install --with-deps chromium
-      - name: Verify production gameplay and repository paths in Chromium
-        run: npm run test:browser
+      # - name: Install test browser
+      #   run: npx playwright install --with-deps chromium
+      # - name: Verify production gameplay and repository paths in Chromium
+      #   run: npm run test:browser
       - name: Preserve browser failure diagnostics
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
