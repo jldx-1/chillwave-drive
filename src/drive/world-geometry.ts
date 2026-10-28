@@ -1,8 +1,16 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+const boxSource=new THREE.BoxGeometry(1,1,1), boxUnit=boxSource.toNonIndexed();boxSource.dispose();
+const cylinderUnits=new Map<number,THREE.BufferGeometry>();
+function cylinderUnit(segments:number):THREE.BufferGeometry {
+  if(!cylinderUnits.has(segments)) {const source=new THREE.CylinderGeometry(1,1,1,segments);cylinderUnits.set(segments,source.toNonIndexed());source.dispose();}
+  return cylinderUnits.get(segments)!;
+}
 export type UVRect = readonly [number, number, number, number];
 /** Static urban detail is merged by material. Every output geometry belongs to its chunk. */
 export class UrbanBatch {
+  private boxes=new Map<THREE.Material,{position:number[];normal:number[];uv:number[]}>();
+  private roundCache=new Map<string,THREE.BufferGeometry>();
   private parts = new Map<THREE.Material, THREE.BufferGeometry[]>();
   add(material: THREE.Material, geometry: THREE.BufferGeometry): void {
     if (material.userData.facade) {
@@ -16,13 +24,29 @@ export class UrbanBatch {
     this.parts.get(material)!.push(geometry);
   }
   box(m: THREE.Material, x: number, y: number, z: number, w: number, h: number, d: number, ry = 0): void {
-    const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y, z); this.add(m, g);
+    let batch=this.boxes.get(m);if(!batch){batch={position:[],normal:[],uv:[]};this.boxes.set(m,batch);}
+    const p=boxUnit.attributes.position,n=boxUnit.attributes.normal,uv=boxUnit.attributes.uv,c=Math.cos(ry),s=Math.sin(ry);
+    for(let i=0;i<p.count;i++) {
+      const px=x+p.getX(i)*w*c+p.getZ(i)*d*s,py=y+p.getY(i)*h,pz=z-p.getX(i)*w*s+p.getZ(i)*d*c;
+      const nx=n.getX(i)*c+n.getZ(i)*s,nz=-n.getX(i)*s+n.getZ(i)*c;
+      batch.position.push(px,py,pz);batch.normal.push(nx,n.getY(i),nz);
+      if(m.userData.facade)batch.uv.push((Math.abs(nx)>.5?pz:px)/12,py/24);else batch.uv.push(uv.getX(i),uv.getY(i));
+    }
+  }
+  /** Rectangular frustum: real tapered crowns and sloped barrier faces. */
+  tapered(m: THREE.Material, x: number, base: number, z: number, w: number, d: number, h: number, topScale: number): void {
+    const vertices: number[] = [];
+    for (const [y,scale] of [[base,1],[base+h,topScale]]) for (const [sx,sz] of [[-1,-1],[1,-1],[1,1],[-1,1]]) vertices.push(x+sx*w*scale/2,y,z+sz*d*scale/2);
+    const g = new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    g.setAttribute('uv',new THREE.Float32BufferAttribute([0,0,1,0,1,1,0,1,0,0,1,0,1,1,0,1],2));
+    g.setIndex([0,1,2,0,2,3,4,6,5,4,7,6,0,5,1,0,4,5,1,6,2,1,5,6,2,7,3,2,6,7,3,4,0,3,7,4]);
+    const flat = g.toNonIndexed(); g.dispose(); flat.computeVertexNormals(); this.add(m,flat);
   }
   cylinder(m: THREE.Material, x: number, y: number, z: number, radius: number, height: number, segments = 8): void {
-    const g = new THREE.CylinderGeometry(radius, radius, height, segments); g.translate(x, y, z); this.add(m, g);
+    const g = cylinderUnit(segments).clone(); g.scale(radius,height,radius); g.translate(x, y, z); this.add(m, g);
   }
   beam(m: THREE.Material, from: THREE.Vector3, to: THREE.Vector3, radius: number, segments = 6): void {
-    const delta = to.clone().sub(from), g = new THREE.CylinderGeometry(radius, radius, delta.length(), segments);
+    const delta = to.clone().sub(from), g = cylinderUnit(segments).clone(); g.scale(radius,delta.length(),radius);
     g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize()));
     g.translate((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2); this.add(m, g);
   }
@@ -32,13 +56,33 @@ export class UrbanBatch {
     g.rotateY(ry); g.translate(x, y, z); this.add(m, g);
   }
   rounded(m: THREE.Material, x: number, base: number, z: number, w: number, d: number, h: number, radius: number): void {
-    const shape = new THREE.Shape(), a = -w / 2, b = -d / 2, r = Math.min(radius, w / 2, d / 2);
-    shape.moveTo(a + r, b); shape.lineTo(a + w - r, b); shape.quadraticCurveTo(a + w, b, a + w, b + r);
-    shape.lineTo(a + w, b + d - r); shape.quadraticCurveTo(a + w, b + d, a + w - r, b + d);
-    shape.lineTo(a + r, b + d); shape.quadraticCurveTo(a, b + d, a, b + d - r);
-    shape.lineTo(a, b + r); shape.quadraticCurveTo(a, b, a + r, b);
-    const g = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 5, steps: 1 });
-    g.rotateX(-Math.PI / 2); g.translate(x, base, z); this.add(m, g);
+    const key=`${w}:${d}:${h}:${radius}`;
+    if(!this.roundCache.has(key)) {
+      const shape = new THREE.Shape(), a = -w / 2, b = -d / 2, r = Math.min(radius, w / 2, d / 2);
+      shape.moveTo(a+r,b);shape.lineTo(a+w-r,b);shape.quadraticCurveTo(a+w,b,a+w,b+r);
+      shape.lineTo(a+w,b+d-r);shape.quadraticCurveTo(a+w,b+d,a+w-r,b+d);
+      shape.lineTo(a+r,b+d);shape.quadraticCurveTo(a,b+d,a,b+d-r);
+      shape.lineTo(a,b+r);shape.quadraticCurveTo(a,b,a+r,b);
+      const g=new THREE.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,curveSegments:5,steps:1});g.rotateX(-Math.PI/2);this.roundCache.set(key,g);
+    }
+    const g=this.roundCache.get(key)!.clone();g.translate(x,base,z);this.add(m,g);
+  }
+  /** Closed, optionally tapered polygon. Concave contours retain their entrance/skywell voids. */
+  prism(m:THREE.Material, x:number, base:number, z:number, w:number,d:number,h:number, points:readonly (readonly [number,number])[], topScale=1, angle=0, slope=0, shell=false):void {
+    const shape=new THREE.Shape(points.map(([px,pz])=>new THREE.Vector2(px*w,-pz*d)));
+    const g=new THREE.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,steps:1});g.rotateX(-Math.PI/2);
+    const p=g.attributes.position,c=Math.cos(angle),s=Math.sin(angle);
+    for(let i=0;i<p.count;i++) {
+      const y=p.getY(i),fraction=y/h,scale=1+(topScale-1)*fraction;
+      const px=p.getX(i)*scale,pz=p.getZ(i)*scale;
+      const top=shell?Math.sqrt(Math.max(.01,1-(px/w*1.85)**2)):1-slope*(px/w+.5);
+      p.setXYZ(i,x+px*c+pz*s,base+y*top,z-px*s+pz*c);
+    }
+    g.computeVertexNormals();this.add(m,g);
+  }
+  ring(m:THREE.Material,x:number,y:number,z:number,radius:number,tube:number):void {
+    const source=new THREE.TorusGeometry(radius,tube,5,32),g=source.toNonIndexed();source.dispose();
+    g.rotateX(Math.PI/2);g.translate(x,y,z);this.add(m,g);
   }
   foliage(m: THREE.Material, x: number, y: number, z: number, scale: THREE.Vector3, seed = 0): void {
     const g = new THREE.IcosahedronGeometry(1, 1); g.scale(scale.x, scale.y, scale.z); g.rotateY(seed); g.translate(x, y, z); this.add(m, g);
@@ -80,6 +124,11 @@ export class UrbanBatch {
   }
   build(): THREE.Group {
     const group = new THREE.Group();
+    for(const [material,arrays] of this.boxes) {
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(arrays.position,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(arrays.normal,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(arrays.uv,2));
+      if(!this.parts.has(material))this.parts.set(material,[]);this.parts.get(material)!.push(g);
+    }
+    this.boxes.clear();for(const g of this.roundCache.values())g.dispose();this.roundCache.clear();
     for (const [material, parts] of this.parts) {
       const compatible = parts.map(g => { if (g.index) return g.toNonIndexed(); return g; });
       const geometry = mergeGeometries(compatible, false)!;

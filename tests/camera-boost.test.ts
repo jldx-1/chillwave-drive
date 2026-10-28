@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { DriveCamera } from '../src/drive/camera';
 import { Vehicle } from '../src/drive/vehicle';
+import { cyberPlayerPrefab } from '../src/drive/cyber-prefabs';
 import { BoostEffects } from '../src/drive/boost-effects';
 import { STEP, neutral } from '../src/drive/config';
 
@@ -23,12 +24,12 @@ describe('steady cockpit and punchy boost',()=>{
     const braking=new Vehicle();braking.speed=35;braking.boostClosePass();
     braking.step(STEP,{...neutral(),brake:1});expect(braking.boostPulse).toBe(0);expect(braking.speed).toBeLessThan(39);
   });
-  it('uses two bounded flame rigs behind the rear wheel mounts and fades them without flashing',()=>{
-    const flames=new BoostEffects(),mounts=[new THREE.Vector3(-.78,.33,1.4),new THREE.Vector3(.78,.33,1.4)];
+  it('uses two bounded flame rigs at the modeled exhaust ports and fades them without flashing',()=>{
+    const flames=new BoostEffects(),mounts=(cyberPlayerPrefab().userData.exhaustMounts as number[][]).map(v=>new THREE.Vector3(...v));
     flames.setMounts(mounts);
     for(let i=0;i<2;i++){
-      expect(flames.group.children[i].position.x).toBe(mounts[i].x);
-      expect(flames.group.children[i].position.z).toBeGreaterThan(mounts[i].z);
+      expect(flames.group.children[i].position.toArray()).toEqual(mounts[i].toArray());
+      expect(flames.group.children[i].position.z).toBeGreaterThan(4.55/2);
     }
     const geometry=(flames.group.children[0]as THREE.Mesh).geometry,material=(flames.group.children[0]as THREE.Mesh).material;
     let previous=1;
@@ -39,7 +40,7 @@ describe('steady cockpit and punchy boost',()=>{
       expect((flames.group.children[0]as THREE.Mesh).geometry).toBe(geometry);
       expect((flames.group.children[1]as THREE.Mesh).material).toBe(material);
     }
-    expect(flames.diagnostics.visible).toBe(false);expect(geometry.attributes.position.count).toBe(8);
+    flames.update(.32,1,true);expect(flames.group.children[0].position.toArray()).toEqual(mounts[0].toArray());expect(flames.group.scale.z).toBe(1);flames.update(0,2);expect(flames.diagnostics.visible).toBe(false);expect(geometry.attributes.position.count).toBe(8);
     flames.dispose();
   });
 });

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CYBER_VEHICLES } from './cyber-vehicles';
 import type { Agent } from './traffic';
 import { sceneZ } from './road';
 import { clamp, damp, type Quality } from './config';
@@ -49,7 +50,7 @@ export class VehicleLighting {
       this.origin=origin;
     }
     const close=agents.filter(a=>Math.abs(a.s-playerS)<100).sort((a,b)=>Math.abs(a.s-playerS)-Math.abs(b.s-playerS));
-    const patrols=close.filter(a=>a.kind==='police'&&a.active);
+    const patrols=close.filter(a=>a.kind==='police'&&a.active||a.model==='aegis'&&a.emergency);
     const active=this.assign(this.warningSlots,patrols,playerS,dt);
     this.units=active.filter(Boolean).length;
     this.warnings.forEach((light,i)=>{
@@ -58,10 +59,11 @@ export class VehicleLighting {
       const phase=.5+.5*Math.cos(time*Math.PI*2/.6);
       const strength=this.warningSlots[slot].level*(red?phase:1-phase);
       light.intensity=strength*(quality==='low'?22:46);
-      this.colors[i].set(red?'#ff253a':'#1675ff').multiplyScalar(strength);
+      const rescue=car?.model==='aegis',color=rescue?(red?'#ffba45':'#35d8ee'):(red?'#ff253a':'#1675ff');
+      light.color.set(color);this.colors[i].set(color).multiplyScalar(strength);
       if(car){
         const x=car.oldX+(car.x-car.oldX)*alpha,s=car.oldS+(car.s-car.oldS)*alpha;
-        light.position.set(x+(red?-.42:.42)*Math.cos(car.yaw),1.84,sceneZ(s,origin)+(red?-.42:.42)*Math.sin(car.yaw));
+        light.position.set(x+(red?-.42:.42)*Math.cos(car.yaw),car.model?CYBER_VEHICLES[car.model].height-.08:1.84,sceneZ(s,origin)+(red?-.42:.42)*Math.sin(car.yaw));
         this.positions[i].copy(light.position);
       }
     });
@@ -71,7 +73,8 @@ export class VehicleLighting {
       if(!car)return;
       const x=car.oldX+(car.x-car.oldX)*alpha,s=car.oldS+(car.s-car.oldS)*alpha;
       const z=sceneZ(s,origin),sin=Math.sin(car.yaw),cos=Math.cos(car.yaw);
-      light.position.set(x+sin*2.2,.88,z-cos*2.2);
+      const front=car.model?CYBER_VEHICLES[car.model].length/2+.12:2.2;
+      light.position.set(x+sin*front,car.model==='titan'?1.48:car.model==='barricade'?1.53:.88,z-cos*front);
       this.targets[i].position.set(x+sin*34,0,z-cos*34);
     });
   }

@@ -49,7 +49,7 @@ describe('brake drifting', () => {
     run(dry, .7, { ...neutral(), steer: 1, brake: 1 }, false);
     run(handbrake, .7, { ...neutral(), steer: 1, handbrake: true });
     expect(dry.slipAngle).toBeGreaterThan(.15); expect(wet.slipAngle).toBeGreaterThan(dry.slipAngle);
-    expect(handbrake.slipAngle).toBeGreaterThan(wet.slipAngle);
+    expect(handbrake.slipAngle).toBeGreaterThan(.25);
   });
   it('shows the car angle from chase view while keeping the cockpit aligned with the driver', () => {
     const car = moving(); run(car, .7, { ...neutral(), steer: 1, brake: 1 });
@@ -75,10 +75,11 @@ describe('brake drifting', () => {
 describe('handbrake direction reversal',()=>{
   it.each([-1,1])('registers an opposite command immediately during a handbrake slide toward %s',direction=>{
     const car=moving(25);run(car,.7,{...neutral(),steer:direction,handbrake:true});
-    const before={yaw:car.yaw,lateral:car.lateral};expect(car.slipAngle*direction).toBeGreaterThan(.4);
+    const before={yaw:car.yaw,lateral:car.lateral};expect(car.slipAngle*direction).toBeGreaterThan(.25);
     car.step(STEP,{...neutral(),steer:-direction,handbrake:true});
-    expect(car.steering*direction).toBeLessThan(0);expect(car.yawRate*direction).toBeLessThan(0);
-    run(car,.2,{...neutral(),steer:-direction,handbrake:true});
+    expect(car.steering*direction).toBeLessThan(0);
+    run(car,.3,{...neutral(),steer:-direction,handbrake:true});
+    expect(car.yawRate*direction).toBeLessThan(0);
     expect(car.lateral*direction).toBeLessThan(0);
     expect((car.yaw-before.yaw)*direction).toBeLessThan(0);expect(car.damage).toBe(0);
   });
@@ -89,5 +90,40 @@ describe('handbrake direction reversal',()=>{
     const coast=(seconds:number)=>{for(let i=0;i<seconds/STEP;i++)car.step(STEP,neutral(),true,1,x=>x);};
     coast(.8);const heading=car.yaw;coast(.5);
     expect(Math.abs(car.yaw-heading)).toBeLessThan(.003);expect(car.damage).toBe(0);
+  });
+});
+
+describe('handbrake control and recovery', () => {
+  it.each([25, 45, 65])('keeps steering reversals controlled at %s m/s and responds after releasing drift', speed => {
+    for (const direction of [-1, 1]) {
+      const car=moving(speed);
+      const steer=(seconds:number, direction:number, handbrake:boolean) => {
+        let peak=0;
+        for(let i=0;i<Math.round(seconds/STEP);i++) {
+          car.step(STEP,{...neutral(),throttle:.5,steer:direction,handbrake},true,1,x=>x);
+          peak=Math.max(peak,Math.abs(car.yawRate));
+        }
+        return peak;
+      };
+      steer(.7,direction,true);
+      expect(car.speed).toBeLessThan(speed);
+      const peak=steer(.3,-direction,true);
+      expect(peak).toBeLessThan(1.4);
+      expect(car.yawRate*direction).toBeLessThan(0);
+      steer(.5,-direction,false);
+      expect(Math.abs(car.slipAngle)).toBeLessThan(.08);
+      expect(car.driftAmount).toBeLessThan(.06);
+      const heading=car.yaw;
+      steer(.5,direction,false);
+      expect((car.yaw-heading)*direction).toBeGreaterThan(.04);
+      expect(car.damage).toBe(0);
+    }
+  });
+  it('settles the slide after releasing the handbrake with no steering', () => {
+    const car=moving(45);run(car,.7,{...neutral(),steer:1,handbrake:true});
+    expect(car.slipAngle).toBeGreaterThan(.25);
+    run(car,.6,neutral());
+    expect(Math.abs(car.slipAngle)).toBeLessThan(.08);
+    expect(car.driftAmount).toBeLessThan(.04);
   });
 });

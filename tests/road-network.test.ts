@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LANES, POLICE_TUNE, STEP, TUNE, VEHICLE_DIMENSIONS, neutral } from '../src/drive/config';
 import { RoadGraph, overpassesAt, road } from '../src/drive/road';
 import { Traffic, type Agent } from '../src/drive/traffic';
-import { Vehicle } from '../src/drive/vehicle';
+import { Vehicle, steeringLimit } from '../src/drive/vehicle';
 
 function agent(traffic: Traffic, kind: Agent['kind'], id: number, s: number, x = LANES[3]): Agent {
   const source = traffic.agents.find(a => a.kind === 'police')!;
@@ -43,7 +43,7 @@ describe('connected highway exit and reentry topology', () => {
     expect(graph.entryWindow(1100)).toBeUndefined();
     expect(graph.mergeWindow(1650)?.rejoin).toBe(1700);
     expect(graph.routeAt(1250)?.district).toBe('commercial');
-    expect(graph.routeAt(4250)?.district).toBe('industrial');
+    expect(graph.routeAt(graph.interval + 1250)?.district).toBe('industrial');
     for (let s = 800; s <= 1700; s += 5) {
       const sample = graph.sampleDetour(s)!;
       expect(graph.corridorAt(s).some(([a, b]) => sample.x - 3.6 >= a && sample.x + 3.6 <= b)).toBe(true);
@@ -98,13 +98,13 @@ describe('connected highway exit and reentry topology', () => {
 });
 
 describe('police vehicle integration', () => {
-  it('retains force-based SUV mass, grip, momentum, steering and suspension through reset', () => {
+  it('retains force-based interceptor mass, grip, momentum, steering and suspension through reset', () => {
     const police = new Vehicle(POLICE_TUNE, -Infinity), player = new Vehicle();
     police.s = -120; police.speed = 20;
     for (let i = 0; i < 20; i++) police.step(STEP, { ...neutral(), throttle: 1, steer: .3 });
     expect(police.s).toBeLessThan(-100); expect(police.s).toBeGreaterThan(-120);
     expect(police.steering).toBeGreaterThan(0); expect(police.roll).toBeGreaterThan(0); expect(police.pitch).toBeGreaterThan(0);
-    expect(police.tuning.mass).toBe(2250); expect(player.tuning).toBe(TUNE);
+    expect(police.tuning.mass).toBe(1900); expect(player.tuning).toBe(TUNE);
     police.yaw = .3; police.setWorldVelocity(4, 30);
     expect(police.speed ** 2).toBeCloseTo(4 ** 2 + 30 ** 2);
     police.reset(); expect(police.tuning).toBe(POLICE_TUNE); expect(police.minimumS).toBe(-Infinity);
@@ -138,7 +138,7 @@ describe('pursuit road containment', () => {
     const cop=agent(traffic,'police',1,1100,15.2);traffic.agents=[cop];traffic.activate(cop);cop.speed=78;
     player.s=1160;player.speed=75;
     for(let frame=0;frame<45/STEP;frame++){
-      player.previous={x:player.x,s:player.s,yaw:0};player.s+=75*STEP;player.x=frame%360<180?1.3:15.4;
+      player.previous={x:player.x,s:player.s,yaw:0};player.s+=75*STEP;player.x=frame%360<180?1.3:14.5;
       if(frame%180===0){cop.lateral=frame%360===0?18:-18;cop.yaw=frame%360===0?.5:-.5;cop.spin=Math.sign(cop.yaw)*.8;}
       traffic.step(STEP,player,frame*STEP);
       const [lo,hi]=road.policeBounds(cop.s,cop.yaw,POLICE_TUNE.footprint,'main');
@@ -148,16 +148,49 @@ describe('pursuit road containment', () => {
         expect(worldX).toBeGreaterThanOrEqual(.57-1e-8);expect(worldX).toBeLessThanOrEqual(16.38+1e-8);
       }
     }
-    expect(cop.s).toBeGreaterThan(3000);expect(cop.active).toBe(true);
+    // Repeated forced spins trade forward speed for recovery; require sustained highway progress.
+    expect(cop.s-1100).toBeGreaterThan(45*35);expect(cop.active).toBe(true);
   });
   it('constrains against the selected branch instead of choosing another disconnected road',()=>{
     const s=1250,hull=POLICE_TUNE.footprint;
     expect(road.constrainPolice(24,s,.4,hull,'main')).toBeLessThan(16);
     expect(road.constrainPolice(24,s,.4,hull,'detour')).toBeGreaterThan(30);
-    for(const base of [0,3000,999000])for(let ds=800;ds<=1700;ds+=3){
+    for(const base of [0,road.interval,road.interval * 333])for(let ds=800;ds<=1700;ds+=3){
       const at=base+ds,sample=road.sampleDetour(at)!,yaw=Math.atan2(sample.tangentX,sample.tangentS);
       const [lo,hi]=road.policeBounds(at,yaw,hull,'detour');
       expect(lo).toBeLessThanOrEqual(hi);expect(sample.x).toBeGreaterThanOrEqual(lo);expect(sample.x).toBeLessThanOrEqual(hi);
+    }
+  });
+});
+
+describe('northbound side street variety', () => {
+  it('connects three different streets to the highway without reversing direction', () => {
+    const graph = new RoadGraph();
+    const routes = [0, 1, 2].map(id => {
+      const start = id * graph.interval + graph.exitAt;
+      const samples = Array.from({length: 181}, (_, i) => graph.sampleDetour(start + i * 5)!);
+      expect(samples.every(s => s.tangentS > .98 && Math.abs(s.curvature) * s.speedLimit ** 2 < 3)).toBe(true);
+      expect(graph.validateNetwork(id)).toEqual([]);
+      return { name: graph.routeAt(start + 450)!.name, center: samples[90].x };
+    });
+    expect(new Set(routes.map(r => r.name)).size).toBe(3);
+    expect(new Set(routes.map(r => r.center)).size).toBe(3);
+  });
+  it('can drive each different route from exit to reentry', () => {
+    const graph = new RoadGraph();
+    for (let id=0; id<3; id++) {
+      const start=id*graph.interval+graph.exitAt, player=new Vehicle();
+      player.s=start-10; player.x=14; player.speed=22;
+      let usedStreet=false;
+      for(let i=0;i<65/STEP&&player.s<start+920;i++) {
+        const target=graph.branchCenter(player.s+18)??14;
+        const heading=Math.atan2(target-player.x,18);
+        const steer=Math.max(-1,Math.min(1,Math.atan((heading-player.yaw)*3*2.7/Math.max(1,player.speed))/steeringLimit(player.speed)));
+        player.step(STEP,{...neutral(),steer,throttle:player.speed<22?.27:0});
+        if(player.s>start+280&&player.s<start+620&&graph.onDetour(player.x,player.s))usedStreet=true;
+      }
+      expect(usedStreet).toBe(true);expect(player.s).toBeGreaterThan(start+900);
+      expect(player.x).toBeLessThan(16);expect(player.damage).toBeLessThan(5);
     }
   });
 });

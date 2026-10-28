@@ -1,47 +1,46 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VEHICLE_CATALOG, type FleetKind } from './vehicle-catalog';
+import { CYBER_VEHICLES,CYBER_MODEL_IDS,cyberModel,type CyberModel } from './cyber-vehicles';
+import { cyberPrefab } from './cyber-prefabs';
+import { VEHICLE_LAMPS } from './lamp-levels';
+export type FleetIdentity=FleetKind|CyberModel;
+const identity=(kind:FleetIdentity):CyberModel=>kind in CYBER_VEHICLES?kind as CyberModel:cyberModel(kind as FleetKind);
 
 export type VehicleLOD = 0 | 1 | 2;
-export type VehicleLampRole = 'head' | 'brake' | 'turn' | 'red' | 'blue';
+export type VehicleLampRole = 'head' | 'brake' | 'turn' | 'reverse' | 'red' | 'blue' | 'amber';
 export interface FleetRig {
   group: THREE.Group; body: THREE.Group; wheelPhase: number; wheels: THREE.Object3D[]; spins: THREE.Object3D[];
   lamps: Record<VehicleLampRole, THREE.MeshStandardMaterial[]>;
   paint: THREE.MeshPhysicalMaterial[]; unique: THREE.Material[];
-  wheelRadius: number;
+  wheelRadius: number; model:CyberModel; trailer?:THREE.Object3D;trailerAngle?:number;
 }
 const sources = new Map<string, Promise<THREE.Group>>();
 const decoded = new Map<string, THREE.Group>();
-const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-const keys = Object.keys(VEHICLE_CATALOG) as FleetKind[];
+const keys=CYBER_MODEL_IDS;
 export const fleetKind = (kind: string): FleetKind => kind === 'van' ? 'truck' : kind as FleetKind;
 export function fleetPath(kind: FleetKind, lod: VehicleLOD = 0): string {
   const spec = VEHICLE_CATALOG[kind];
   return lod === 2 ? spec.lod2Path ?? spec.lod1Path ?? spec.path : lod === 1 ? spec.lod1Path ?? spec.path : spec.path;
 }
 /** Buffers/textures are shared for the page lifetime, never disposed when traffic recycles. */
-export function fleetAsset(kind: FleetKind, lod: VehicleLOD = 0): Promise<THREE.Group> {
-  const path = fleetPath(kind, lod);
-  let pending = sources.get(path);
-  if (!pending) {
-    pending = loader.loadAsync(import.meta.env.BASE_URL + path).then(g => { g.scene.updateMatrixWorld(true); decoded.set(path, g.scene); return g.scene; });
-    sources.set(path, pending);
-  }
+export function fleetAsset(kind: FleetIdentity, lod: VehicleLOD = 0): Promise<THREE.Group> {
+  const model=identity(kind),key=model+':'+lod;
+  let pending=sources.get(key);
+  if(!pending){const group=cyberPrefab(model,lod);decoded.set(key,group);pending=Promise.resolve(group);sources.set(key,pending);}
   return pending;
 }
 export async function preloadFleet(): Promise<void> {
   await Promise.all(keys.map(kind => Promise.all([fleetAsset(kind, 0), fleetAsset(kind, 1), fleetAsset(kind, 2)])));
 }
-export function fleetDiagnostics() { return { models: decoded.size, requested: sources.size, categories: keys.length, ready: keys.every(k => decoded.has(fleetPath(k))) }; }
+export function fleetDiagnostics() { return { models: decoded.size, requested: sources.size, categories: keys.length, ready: keys.every(k => decoded.has(k+':0')) }; }
 export function materialRole(m: THREE.Material): string { return String(m.userData.vehicleRole ?? m.userData.role ?? '').toLowerCase(); }
-/** Canonical GLBs carry their pivots and surfaces; runtime creates no substitute coachwork. */
-export function rigFleetCar(source: THREE.Group, kind: FleetKind, color: string): FleetRig {
+/** Clone a cached authored prefab; geometry remains shared and dynamic materials are independent. */
+export function rigFleetCar(source: THREE.Group, kind: FleetIdentity, color: string): FleetRig {
   const group = source.clone(true), unique: THREE.Material[] = [], paint: THREE.MeshPhysicalMaterial[] = [];
-  const lamps: FleetRig['lamps'] = { head: [], brake: [], turn: [], red: [], blue: [] };
+  const lamps: FleetRig['lamps'] = { head: [], brake: [], turn: [], reverse: [], red: [], blue: [], amber: [] };
   const materials = new Map<THREE.Material, THREE.MeshPhysicalMaterial>();
-  group.name = kind + ' GLB';
+  group.name=CYBER_VEHICLES[identity(kind)].name;
   group.traverse(o => {
     if (!(o instanceof THREE.Mesh)) return;
     const material = (original: THREE.Material) => {
@@ -53,38 +52,45 @@ export function rigFleetCar(source: THREE.Group, kind: FleetKind, color: string)
       const role = materialRole(m);
       if (role === 'paint') {
         m.clearcoat = 1; m.clearcoatRoughness = .14; m.metalness = Math.max(.25, m.metalness); m.roughness = Math.min(.34, Math.max(.18, m.roughness));
-        if (kind !== 'police' && !m.map) m.color.set(color);
+        if (CYBER_VEHICLES[identity(kind)].emergency!=='police' && !m.map) m.color.set(color);
         paint.push(m);
       } else if (role === 'glass' || role === 'window') {
-        m.color.set('#b3c6cf'); m.metalness = .05; m.roughness = .09; m.transparent = true; m.opacity = .38; m.depthWrite = false; m.side = THREE.DoubleSide; m.clearcoat = 1;
+        m.color.set('#193346'); m.metalness = .6; m.roughness = .13; m.clearcoat = 1;
+        if(identity(kind)==='orbit'){m.transparent=true;m.opacity=.35;m.depthWrite=false;m.side=THREE.DoubleSide;}
       } else if (role === 'tire' || role === 'rubber') { m.roughness = .91; m.metalness = 0; }
       if (role in lamps) {
         const lamp = role as VehicleLampRole; lamps[lamp].push(m);
-        m.emissive.set(lamp === 'head' ? '#d2e7ff' : lamp === 'brake' || lamp === 'red' ? '#ff1934' : lamp === 'blue' ? '#1675ff' : '#ffad38');
-        m.emissiveIntensity = lamp === 'head' ? 1.3 : lamp === 'brake' ? .3 : 0; m.roughness = .18;
+        m.emissive.set(lamp === 'head' ? '#d2e7ff' : lamp === 'brake' || lamp === 'red' ? '#ff1934' : lamp === 'blue' ? '#1675ff' : lamp==='reverse'?'#e8f6ff':'#ffad38');
+        if(original instanceof THREE.MeshStandardMaterial&&original.userData.cyber)m.emissive.copy(original.emissive);
+        m.emissiveIntensity = lamp === 'head' ? VEHICLE_LAMPS.head : lamp === 'brake' ? VEHICLE_LAMPS.tail : lamp==='amber'?.55:0; m.roughness = .18;
       }
       materials.set(original, m); unique.push(m); return m;
     };
     o.material = Array.isArray(o.material) ? o.material.map(material) : material(o.material);
     o.castShadow = !(Array.isArray(o.material) ? o.material.some(m => m.transparent) : o.material.transparent); o.receiveShadow = true;
   });
-  const wheels = ['Wheel_FL', 'Wheel_RL', 'Wheel_FR', 'Wheel_RR'].map(name => group.getObjectByName(name)).filter((o): o is THREE.Object3D => !!o);
-  if (wheels.length !== 4) { unique.forEach(m => m.dispose()); throw new Error('Vehicle ' + kind + ' has invalid wheel pivots'); }
+  const wheels:THREE.Object3D[]=[];
+  group.traverse(o=>{if(o.userData.vehicleWheel||/^Wheel_(FL|FR|RL|RR)$/.test(o.name))wheels.push(o);});
+  if(wheels.length<4){unique.forEach(m=>m.dispose());throw new Error('Vehicle '+kind+' has invalid wheel pivots');}
   const spins = wheels.map(w => w.getObjectByName('Spin') ?? w.children[0]);
   // Suspension tilts the sprung body; tire contact patches stay on the road.
   const body = new THREE.Group(), frame = wheels[0].parent!;
   body.name = 'SprungBody';
   for (const child of [...frame.children]) if (!wheels.includes(child)) body.add(child);
   frame.add(body);
-  return { group, body, wheelPhase: 0, wheels, spins, lamps, paint, unique, wheelRadius: VEHICLE_CATALOG[kind].wheelRadius };
+  return { group, body, wheelPhase: 0, wheels, spins, lamps, paint, unique, wheelRadius: CYBER_VEHICLES[identity(kind)].wheelRadius,model:identity(kind),trailer:group.getObjectByName('TrailerPivot') };
 }
-export async function buildFleetCar(kind: FleetKind, color: string, lod: VehicleLOD = 0): Promise<FleetRig> { return rigFleetCar(await fleetAsset(kind, lod), kind, color); }
+export async function buildFleetCar(kind: FleetIdentity, color: string, lod: VehicleLOD = 0): Promise<FleetRig> { return rigFleetCar(await fleetAsset(kind, lod), kind, color); }
 export function animateFleetRig(rig: FleetRig, dt: number, time: number, speed: number, steering: number, braking: boolean, police: boolean, signal: number = 0): void {
   rig.wheelPhase += speed * dt / rig.wheelRadius;
-  rig.wheels.forEach((wheel, i) => wheel.rotation.y = i % 2 === 0 ? steering : 0);
+  rig.wheels.forEach(wheel=>wheel.rotation.y=wheel.userData.frontWheel||/Wheel_F[LR]/.test(wheel.name)?steering:0);
+  if(rig.trailer)rig.trailer.rotation.y=rig.trailerAngle??THREE.MathUtils.damp(rig.trailer.rotation.y,THREE.MathUtils.clamp(-steering*.18,-.075,.075),2,dt);
   rig.spins.forEach(wheel => wheel.rotation.x = -rig.wheelPhase);
-  rig.lamps.head.forEach(m => m.emissiveIntensity = 1.5);
-  rig.lamps.brake.forEach(m => m.emissiveIntensity = braking ? 3.5 : .25);
+  rig.lamps.head.forEach(m => m.emissiveIntensity = VEHICLE_LAMPS.head);
+  rig.lamps.brake.forEach(m => m.emissiveIntensity = braking ? VEHICLE_LAMPS.brake : VEHICLE_LAMPS.tail);
+  rig.lamps.reverse.forEach(m=>m.emissiveIntensity=speed<-.2?2:0);
+  const rescue=CYBER_VEHICLES[rig.model].emergency==='rescue'&&police;
+  rig.lamps.amber.forEach(m=>m.emissiveIntensity=rescue?(time%.8<.22||time%.8>.35&&time%.8<.5?4:.05):.55);
   const blink = Math.floor(time * 2.4) % 2 === 0;
   rig.lamps.turn.forEach(m => {
     const side = String(m.userData.vehicleSide ?? '');
@@ -93,7 +99,7 @@ export function animateFleetRig(rig: FleetRig, dt: number, time: number, speed: 
   });
   const phase = time % .6 < .3;
   for (const role of ['red', 'blue'] as const) rig.lamps[role].forEach(m => {
-    const on = police && (role === 'red' ? phase : !phase);
+    const on = police && (role === 'red' ? !rescue&&phase : rescue?time%.8>.4:!phase);
     m.emissiveIntensity = on ? 5 : 0;
     m.color.set(on ? role === 'red' ? '#ff253a' : '#1675ff' : '#20262c');
   });
@@ -107,7 +113,7 @@ interface Proxy { group: THREE.Group; meshes: THREE.InstancedMesh[]; count: numb
 export class FleetDistant {
   readonly group = new THREE.Group();
   readonly ready: Promise<void>;
-  private proxies = new Map<FleetKind, Proxy>();
+  private proxies = new Map<CyberModel, Proxy>();
   private matrix = new THREE.Matrix4();
   private position = new THREE.Vector3();
   private rotation = new THREE.Quaternion();
@@ -136,8 +142,8 @@ export class FleetDistant {
     })).then(() => {});
   }
   begin(): void { for (const p of this.proxies.values()) p.count = 0; }
-  place(kind: FleetKind, x: number, z: number, yaw: number): void {
-    const p = this.proxies.get(kind); if (!p || p.count >= 100) return;
+  place(kind: FleetKind, x: number, z: number, yaw: number,model?:CyberModel): void {
+    const p = this.proxies.get(cyberModel(kind,model)); if (!p || p.count >= 100) return;
     this.position.set(x, 0, z); this.rotation.setFromAxisAngle(this.up, -yaw); this.matrix.compose(this.position, this.rotation, this.scale);
     for (const mesh of p.meshes) mesh.setMatrixAt(p.count, this.matrix); p.count++;
   }

@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { MusicSystem } from '../effects/music';
 import { fade } from '../effects/music-mix';
 import type { Preferences } from './storage';
 import type { Vehicle } from './vehicle';
@@ -8,15 +7,14 @@ interface Siren { source: OscillatorNode; panner: PannerNode; gain: GainNode }
 /** Original synthesized driving sounds; licensed recorded engines can replace these voices. */
 export class DriveAudio {
   private context?: AudioContext;
-  private master?: GainNode; private effects?: GainNode; private musicBus?: GainNode; private cabin?: BiquadFilterNode;
+  private master?: GainNode; private effects?: GainNode; private cabin?: BiquadFilterNode;
   private engine: { osc: OscillatorNode; gain: GainNode }[] = [];
   private sirens = new Map<number, Siren>();
   private passby: Siren[] = [];
   private noise?: GainNode; private tire?: GainNode; private skid?: GainNode;
-  private music?: MusicSystem;
   private impactNoise?: AudioBuffer;
   private lastGear = 1;
-  private loading?: Promise<boolean>; private style = ''; private paused = true;
+  private paused = true;
   private suspend?: ReturnType<typeof setTimeout>;
   status = 'Click Start Drive to enable audio';
   private settings?: Preferences;
@@ -26,7 +24,7 @@ export class DriveAudio {
       if (!this.context) this.initialize();
       this.paused = false; await this.context!.resume(); this.configure(settings);
       fade(this.master!.gain, 1, this.context!.currentTime, .05);
-      await this.prepare(settings);
+
     } catch { this.status = 'Audio unavailable; driving remains available'; }
   }
   private initialize(): void {
@@ -35,8 +33,6 @@ export class DriveAudio {
     this.master = ctx.createGain(); this.master.gain.value = 0; this.master.connect(limiter);
     this.effects = ctx.createGain(); this.cabin = ctx.createBiquadFilter(); this.cabin.type = 'lowpass'; this.cabin.frequency.value = 12000;
     this.effects.connect(this.cabin); this.cabin.connect(this.master);
-    this.musicBus = ctx.createGain(); this.musicBus.connect(this.master);
-    this.music = new MusicSystem(ctx, this.musicBus, status => { this.status = status === 'ready' ? 'Original Chillwave · seamless sessions' : status === 'unavailable' ? 'Music unavailable · toggle music to retry' : 'Loading soundtrack…'; });
     for (let i = 0; i < 5; i++) {
       const osc = ctx.createOscillator(), gain = ctx.createGain(); osc.type = i === 0 ? 'sine' : i === 1 ? 'triangle' : 'sawtooth';
       const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = i < 2 ? 500 : 1100;
@@ -63,21 +59,12 @@ export class DriveAudio {
     this.settings = { ...settings }; if (!this.context) return;
     const now = this.context.currentTime;
     fade(this.effects!.gain, settings.effectsVolume, now, .1);
-    fade(this.musicBus!.gain, settings.musicEnabled ? settings.musicVolume : 0, now, .15);
-    if (!this.paused) void this.prepare(settings);
   }
-  private async prepare(settings: Preferences): Promise<void> {
-    if (!settings.musicEnabled || !this.music) return;
-    if (!this.loading || this.style !== settings.musicStyle || this.music.currentStatus === 'unavailable') {
-      this.style = settings.musicStyle; this.loading = this.music.prepare(settings.musicStyle);
-    }
-    const ready = await this.loading;
-    if (ready && !this.paused && this.settings?.musicEnabled) this.music.start();
-  }
-  pause(): void {
+  pause(tail = 0): void {
     this.paused = true; if (!this.context) return;
-    fade(this.master!.gain, 0, this.context.currentTime, .015);
-    this.suspend = setTimeout(() => { if (this.paused) void this.context?.suspend(); }, 100);
+    if (this.suspend) clearTimeout(this.suspend);
+    fade(this.master!.gain, 0, this.context.currentTime + tail, .015);
+    this.suspend = setTimeout(() => { if (this.paused) void this.context?.suspend(); }, 100 + tail * 1000);
   }
   impact(severity = 15): void {
     const ctx = this.context; if (!ctx || this.paused) return;
@@ -118,19 +105,22 @@ export class DriveAudio {
       voice.panner.positionX.value = a.x; voice.panner.positionY.value = .7; voice.panner.positionZ.value = -(a.s - origin);
     });
     const police = traffic.agents.filter(a => a.kind === 'police' && a.active);
-    for (const [id, voice] of this.sirens) if (!police.some(a => a.id === id)) { voice.source.stop(); voice.source.disconnect(); voice.gain.disconnect(); voice.panner.disconnect(); this.sirens.delete(id); }
+    for (const [id, voice] of this.sirens) if (!police.some(a => a.id === id)) {
+      voice.source.stop(); voice.source.disconnect(); voice.gain.disconnect(); voice.panner.disconnect(); this.sirens.delete(id);
+    }
     for (const a of police) {
       let voice = this.sirens.get(a.id);
       if (!voice) {
         const source = ctx.createOscillator(), panner = ctx.createPanner(), gain = ctx.createGain();
-        source.type = 'triangle'; panner.panningModel = 'HRTF'; panner.distanceModel = 'inverse'; panner.refDistance = 7; panner.maxDistance = 400; panner.rolloffFactor = 1.1;
+        source.type = 'triangle'; panner.panningModel = 'HRTF'; panner.distanceModel = 'inverse';
+        panner.refDistance = 7; panner.maxDistance = 400; panner.rolloffFactor = 1.1;
         source.connect(gain); gain.gain.value = .1; gain.connect(panner); panner.connect(this.effects!); source.start();
         voice = { source, panner, gain }; this.sirens.set(a.id, voice);
       }
       voice.source.frequency.setTargetAtTime(700 + 380 * (.5 + .5 * Math.sin(now * (a.id % 2 ? 3 : 5))), now, .025);
       voice.panner.positionX.value = a.x; voice.panner.positionY.value = 1.4; voice.panner.positionZ.value = -(a.s - origin);
     }
-    this.music?.setFlow(Math.min(100, 10 + player.speed * .2 + Math.max(0, traffic.level - 1) * 18 + traffic.pressure * 28));
-    this.music?.update(1 / 60, !!this.settings?.musicEnabled && this.settings.musicVolume > 0);
+
+
   }
 }

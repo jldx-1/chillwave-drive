@@ -55,13 +55,14 @@ export class RainGlass {
     return { x: v.x, y: (v.y - GLASS.baseY) * GLASS.upY + (v.z - GLASS.baseZ) * GLASS.upZ };
   }
   update(dt: number, speed: number, sheltered: boolean, reduced: boolean): void {
+    this.redraw += dt;
+    if (this.redraw < 1 / 30) return;
+    const elapsed = Math.min(.1, this.redraw); this.redraw = 0;
     const segments: BladeSegment[] = this.blades.map(b => {
       b.pivot.updateMatrix();
       return { a: this.project(b.a.clone().applyMatrix4(b.pivot.matrix)), b: this.project(b.b.clone().applyMatrix4(b.pivot.matrix)) };
     });
-    this.film.update(dt, speed, segments, sheltered, reduced); this.redraw += dt;
-    if (this.redraw < 1 / 30) return;
-    this.redraw = 0;
+    this.film.update(elapsed, speed, segments, sheltered, reduced);
     const ctx = this.context, w = this.canvas.width, h = this.canvas.height;
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
     for (const d of this.film.drops) {

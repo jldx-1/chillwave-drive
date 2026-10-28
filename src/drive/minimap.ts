@@ -1,6 +1,7 @@
 import type { Vehicle } from './vehicle';
 import type { Traffic } from './traffic';
 import { road } from './road';
+import { medianIsOpen, medianGate } from './median';
 /** North-up navigation uses logical world coordinates, independent of origin rebasing. */
 export function drawNavigation(ctx: CanvasRenderingContext2D, player: Vehicle, traffic: Traffic, time: number): void {
   const w = ctx.canvas.width, h = ctx.canvas.height, sx = 2.5, sy = .36;
@@ -9,6 +10,12 @@ export function drawNavigation(ctx: CanvasRenderingContext2D, player: Vehicle, t
   for (const [a,b] of [[-16,-.6],[.6,16]]) { ctx.fillStyle = '#49617055';ctx.fillRect(x(a), 0, (b-a)*sx, h); }
   ctx.strokeStyle = '#a2b5bf55'; ctx.lineWidth = 1;
   for (const lane of [-16,-.6,.6,16]) {ctx.beginPath();ctx.moveTo(x(lane),0);ctx.lineTo(x(lane),h);ctx.stroke();}
+  for (let py = 0; py < h; py += 2) {
+    const at = player.s + (h * .73 - py) / sy;
+    if (!medianIsOpen(at, player.simulationTime, player.medianHeld)) continue;
+    ctx.fillStyle = medianGate(at, player.simulationTime, player.medianHeld).warning ? '#ffc25f' : '#62f7cc';
+    ctx.fillRect(x(-1.3), py, 2.6 * sx, 2);
+  }
   ctx.setLineDash([3,5]);ctx.strokeStyle = '#afbdc32b';for(const lane of [-11.9,-8.3,-4.7,4.7,8.3,11.9]){ctx.beginPath();ctx.moveTo(x(lane),0);ctx.lineTo(x(lane),h);ctx.stroke();}ctx.setLineDash([]);
   ctx.strokeStyle = '#ccad86'; ctx.lineWidth = 5; ctx.beginPath(); let started = false;
   for (let py = -10; py < h+10; py+=2) { const s = player.s+(h*.73-py)/sy, center=road.branchCenter(s); if(center===undefined){started=false;continue;}if(!started){ctx.moveTo(x(center),py);started=true;}else ctx.lineTo(x(center),py); }ctx.stroke();

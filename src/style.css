@@ -9,3 +9,146 @@
 #load-status{display:block;margin-top:.65rem;color:#c4c5d1;font:400 .75rem "DM Sans",sans-serif;letter-spacing:.04em}#load-status[hidden]{display:none}
 
 .drive-score{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 9px;margin-top:5px;max-width:165px}.drive-score>span{font-size:7px;letter-spacing:1.2px;color:var(--amber)}.drive-score strong{font:500 25px 'Barlow Condensed',sans-serif}.drive-score>span:last-child{flex-basis:100%;font-size:7px;color:#b4d5c4}.score-record{margin-top:10px;font-size:8px;letter-spacing:1.3px;color:#b2bbc4}.score-record b{margin-left:14px;color:var(--amber);font-weight:500}
+
+.powerups{position:absolute;left:4.5%;top:280px;display:flex;flex-direction:column;gap:8px;font-size:8px;letter-spacing:1px;color:#b9ccd6}.powerups span{padding:8px 10px;background:#101f2cbb;border-left:2px solid #56717e}.powerups #shield-status.active{color:#62f7cc;border-color:#62f7cc}.powerups #turbo-status.active{color:#ffc25f;border-color:#ffc25f}@media(max-width:800px){.powerups{top:220px;font-size:6px;gap:4px}}@media(max-height:500px){.powerups{top:190px;font-size:6px}.powerups span{padding:5px 7px}}
+
+/* Thumb controls remain clear of notches and browser/home-indicator safe areas. */
+@media(pointer:coarse){
+  .touch-controls{left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));align-items:flex-end;gap:16px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .touch-controls .touch-steering{pointer-events:auto;display:flex;gap:10px;padding:5px;border:1px solid #b1c7d64d;border-radius:20px;background:#0e1d2c99;touch-action:none}
+  .touch-controls .touch-steering button{width:66px;height:72px;font-size:24px;border-radius:14px;background:#223c50d9}
+  .touch-controls .touch-pedals{display:grid;grid-template-columns:58px 78px;grid-template-rows:44px 82px;gap:8px}
+  .touch-controls .touch-pedals button{width:100%;height:100%;font-size:11px;font-weight:700;letter-spacing:.5px;border-radius:14px;background:#26384bdd}
+  .touch-controls [data-key="KeyW"]{background:#b8d6c9e8!important;color:#102c26;font-size:19px!important;border-color:#c6f6df}
+  .touch-controls [data-key="KeyS"]{background:#79464cdd!important;border-color:#d59b9b}
+  .touch-controls button.is-held{background:#e8c39e!important;color:#162631;box-shadow:0 0 0 2px #ffe0ad88,inset 0 2px 8px #0003}
+  .touch-controls [data-key="Space"],.touch-controls [data-action="camera"]{font-size:9px!important}
+  body[data-state=over] .touch-controls{display:none}
+  .header{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+  .header-right button{width:44px;height:44px}
+  .vehicle-health,body[data-view=cockpit] .vehicle-health{bottom:166px;left:5%;width:145px}
+  .speedometer,body[data-view=cockpit] .speedometer{bottom:215px}
+  .navigation{bottom:163px;width:145px}.navigation canvas{width:145px;height:118px}
+  .powerups{top:222px;font-size:8px;max-width:220px}.powerups span{padding:7px 9px;letter-spacing:.3px}
+  .vehicle-health>span{font-size:9px}.vehicle-health>small{display:none}
+  #toast{top:32%;font-size:9px}
+  #overlay{padding:16px; padding-bottom:max(16px,env(safe-area-inset-bottom))}
+}
+@media(pointer:coarse) and (max-width:360px){
+  .touch-controls{left:10px;right:10px;gap:10px}.touch-controls .touch-steering{gap:6px;padding:4px}
+  .touch-controls .touch-steering button{width:58px;height:70px}.touch-controls .touch-pedals{grid-template-columns:52px 68px}
+  .powerups{font-size:7px}.navigation{right:3%;width:125px}.navigation canvas{width:125px;height:103px}
+}
+@media(pointer:coarse) and (max-height:500px){
+  .header{height:60px}.brand{font-size:17px}.brand-icon{font-size:30px}.weather{display:none}
+  .distance-block{top:70px;left:20px;gap:4px}.distance-block strong{font-size:23px}.distance-block .eyebrow{font-size:7px}.distance-block>#route-name{display:none}
+  .drive-score{margin-top:0;gap:3px 7px}.drive-score strong{font-size:20px}.drive-score>span:last-child{display:none}
+  .pursuit{top:70px;left:auto;right:20px;transform:none;min-width:145px}.pursuit>.eyebrow{font-size:7px}#pursuit-level{font-size:18px;margin:4px 0}#police-state{font-size:6px}
+  .powerups{top:142px;left:20px;font-size:7px;gap:3px}.powerups span{padding:5px 7px}
+  .navigation{display:none}.vehicle-health,body[data-view=cockpit] .vehicle-health{bottom:157px;left:auto;right:20px;width:144px}
+  .speedometer,body[data-view=cockpit] .speedometer{top:14px;bottom:auto;left:50%;transform:translateX(-50%);transform-origin:center}
+  .speed-ring{display:flex;align-items:center;justify-content:center;gap:7px;width:100px;height:40px;border:0;border-radius:8px;padding:0;background:#10202a99}
+  .speed-ring strong{font-size:30px;letter-spacing:0;margin:0}.speed-ring>span{font-size:10px}.speed-ring small{font-size:6px}.rev-track,#view-label{display:none}
+  #toast{top:52%;font-size:8px;max-width:45%}
+  #main-menu{top:76px;left:6%;width:88%}#main-menu h1{font-size:47px;margin:13px 0 10px}#main-menu p{font-size:10px;line-height:1.5}
+  #main-menu .start-button{position:absolute;right:0;top:52px;width:215px;height:52px;margin:0}
+  #main-menu nav{position:absolute;right:0;top:128px;gap:21px;margin:0}#main-menu #load-status{position:absolute;right:0;top:108px;font-size:9px;margin:0}
+  #main-menu .record,#main-menu .score-record{display:none}.menu-caption{display:none}.menu-footer{bottom:10px;padding-top:8px;font-size:6px}
+}
+@media(pointer:coarse) and (orientation:portrait) and (max-height:700px){
+  .powerups{top:200px;max-width:155px;font-size:7px}.powerups span{padding:5px 7px}
+  .speedometer,body[data-view=cockpit] .speedometer{bottom:205px;transform:scale(.7);transform-origin:bottom left}
+  .vehicle-health,body[data-view=cockpit] .vehicle-health{bottom:160px;width:130px}
+  .navigation{bottom:164px;width:125px}.navigation canvas{width:125px;height:103px}
+}
+.panel input[type=url]{width:210px;max-width:57%;background:#142534;color:#dbe8ed;border:1px solid #91bec04d;border-radius:4px;padding:8px;font-size:10px;min-width:0}
+
+/* Compact station banner; the full video controls are available from its thumbnail. */
+.radio-card{position:fixed;z-index:5;top:22px;right:calc(4.4% + 112px);width:280px;font:10px 'DM Sans',sans-serif;color:#d9fcff}
+.radio-banner{height:54px;display:grid;grid-template-columns:44px minmax(0,1fr)38px;align-items:center;gap:9px;padding:4px 6px;border:1px solid #49e9ef99;border-right:2px solid #f252dc;background:linear-gradient(110deg,#091b34ed,#211036ed);box-shadow:0 0 18px #16c8ef20,inset 0 0 14px #8439da18;border-radius:5px}
+.radio-art{position:relative;width:44px;height:44px;border:1px solid #76e6ff66;padding:0;overflow:hidden;border-radius:3px;cursor:pointer}
+.radio-art img{display:block;width:100%;height:100%;object-fit:cover}
+.radio-art:hover{border-color:#ff58db;box-shadow:0 0 10px #ff49d770}
+.radio-copy{min-width:0}.radio-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:8px;font-weight:700;letter-spacing:1.25px;color:#c4faff}
+.radio-heading>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.radio-status{display:block;margin-top:6px;font-size:8px;line-height:1.3;letter-spacing:.5px;color:#9aaaca;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.radio-status:hover{color:#ff77df}
+.radio-toggle{width:36px;height:38px;border:1px solid #53ebef66;border-radius:4px;background:#0f293c;color:#64f9ee;font-size:17px;cursor:pointer}
+.radio-toggle:hover{color:white;border-color:#fd60db;box-shadow:0 0 14px #f044c738}
+.radio-equalizer{display:flex;align-items:center;gap:2px;height:15px;flex-shrink:0}.radio-equalizer i{width:2px;height:3px;background:#4cebdc;box-shadow:0 0 5px #43eee877}
+.radio-card[data-playback=playing] .radio-equalizer i{animation:radio-bars .55s ease-in-out infinite alternate}
+.radio-card[data-playback=playing] .radio-equalizer i:nth-child(2){animation-delay:-.25s;animation-duration:.72s;background:#db64f6}
+.radio-card[data-playback=playing] .radio-equalizer i:nth-child(3){animation-delay:-.43s;animation-duration:.48s}
+.radio-card[data-playback=playing] .radio-equalizer i:nth-child(4){animation-delay:-.17s;animation-duration:.65s;background:#db64f6}
+.radio-card[data-playback=playing] .radio-equalizer i:nth-child(5){animation-delay:-.36s;animation-duration:.8s}
+.radio-card[data-playback=playing] .radio-status{color:#69f5d9}.radio-card[data-playback=error] .radio-status,.radio-card[data-playback=blocked] .radio-status{color:#ff91dc}
+.radio-video{position:absolute;top:62px;right:0;width:322px;border:1px solid #5cf0ed99;background:#081527;box-shadow:0 12px 35px #000b,0 0 20px #a540d330;border-radius:5px;overflow:hidden}
+.radio-video iframe{display:block;width:320px;height:200px;border:0}.radio-player-heading{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 12px;color:#8cebe9;font-size:8px;letter-spacing:2px}.radio-close{width:32px;height:32px;font-size:22px;color:#ff7edb}
+.weather{position:absolute;right:calc(4.4% + 112px);top:83px;font-size:8px;color:#8fa8c5}
+@keyframes radio-bars{from{height:3px}to{height:15px}}
+@media(max-width:1100px){.pursuit{top:105px}}
+@media(max-width:900px){.radio-card{width:240px}.radio-heading{font-size:7px;letter-spacing:.8px}.radio-banner{gap:6px}}
+@media(pointer:coarse){.radio-card{top:82px;right:max(12px,env(safe-area-inset-right));width:232px}.radio-banner{height:52px;grid-template-columns:44px minmax(0,1fr)44px;gap:5px;padding:3px 4px}.radio-art,.radio-toggle{width:44px;height:44px}.radio-status{font-size:7px}.radio-heading{font-size:7px;letter-spacing:.6px}.pursuit{top:151px;right:12px;left:auto;transform:none;min-width:145px}.radio-video{width:322px;max-width:calc(100vw - 24px)}.radio-video iframe{width:100%;min-width:200px}.radio-close{width:44px;height:34px}}
+@media(pointer:coarse) and (orientation:landscape){.radio-card{top:6px;right:calc(max(20px,env(safe-area-inset-right)) + 108px);width:232px}.radio-banner{height:48px}.pursuit{top:70px;right:20px}.speedometer,body[data-view=cockpit] .speedometer{top:70px}.radio-video{top:54px}}
+@media(prefers-reduced-motion:reduce){.radio-card .radio-equalizer i{animation:none!important}}
+
+/* Neon cockpit interface: cool glass, cyan telemetry and magenta pursuit accents. */
+:root{color:#e9faff;--muted:#a6b5da;--amber:#54f1ed;--line:#6f9cda40;--panel:#10152ef5;--cyan:#50f5ef;--pink:#ff4bc5;--violet:#a177ff}
+button:hover,a:hover{color:#ff8de0}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline-color:#59fff0}
+.screen-shade{background:linear-gradient(90deg,#071329ef 0%,#161234bf 28%,#10133018 67%,transparent),linear-gradient(0deg,#110e2980,transparent 22%)}
+body:not([data-state=menu]) .screen-shade{background:linear-gradient(0deg,#090d2770,transparent 28%,transparent 80%,#0e103348)}
+.brand{color:#effcff;text-shadow:0 0 18px #24bdff3d}.brand-icon{color:#5bf4f4;text-shadow:0 0 18px #26bfff99}.brand-sub{color:#dc8aff;letter-spacing:7px}
+.header-right button{border-color:#4ce7ef70;background:linear-gradient(140deg,#12344a99,#2f164599);color:#b8ffff;box-shadow:inset 0 0 10px #3f7fff15;border-radius:3px}
+.header-right button:hover{color:white;border-color:#ff5cce;box-shadow:0 0 16px #f445c94a}
+.status-dot{background:#4ffce3;box-shadow:0 0 12px #4afcda}.eyebrow{color:#7efcf2}
+h1{color:#e9fbff;text-shadow:0 0 35px #4677ff35}h1 em{background:linear-gradient(100deg,#67fff0 5%,#8a9dff 48%,#ff53d5 98%);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;color:#cb6dff}
+#main-menu p{color:#b9c8e2}.start-button,.panel .primary-button{background:linear-gradient(110deg,#43f3e9,#80b4ff 58%,#dd68f2);color:#09132b;box-shadow:0 0 26px #2cdcf02b,inset 0 1px #e4ffff88;border:1px solid #94f9ff99;border-radius:2px}
+.start-button:hover,.panel .primary-button:hover{background:linear-gradient(110deg,#8bfff4,#b6baff 58%,#ff8deb);color:#071027;box-shadow:0 0 28px #b64dff55}
+nav button{color:#c4dcf7;border-bottom:1px solid #ba5efb66;padding-bottom:5px}nav button:hover{border-color:#57fced;color:#71fff0}
+.record,.menu-footer{border-color:#7585dd45}.record>span,.score-record{color:#94b8d5}.record strong,.score-record b{color:#6dffe7;text-shadow:0 0 12px #42effb33}
+.menu-caption strong{color:#f579dd;text-shadow:0 0 18px #ff4ac34d}.menu-caption>span,.menu-footer{color:#a8bbdb}
+.distance-block{border-left:2px solid #4dece5;padding:9px 12px;background:linear-gradient(90deg,#071b34c9,#13193455,transparent);border-radius:0 4px 4px 0}
+.distance-block strong{color:#f0fdff;text-shadow:0 0 16px #49d4ff45}.distance-block strong small,.distance-block>#route-name{color:#aecbe4}
+.drive-score>span{color:#ff7fe0}.drive-score strong{color:#edfaff}.drive-score>span:last-child{color:#6cecd7}
+.pursuit{padding:7px 9px;background:linear-gradient(90deg,transparent,#241133b8,transparent);border-bottom:1px solid #ec48b748}.pursuit>.eyebrow{color:#ff91dc}
+#pursuit-level{color:#ff56c2;text-shadow:0 0 14px #f34bab88}#police-state{color:#f5b7e5}.capture-track{background:#a5398630}.capture-track>span{background:linear-gradient(90deg,#b96cff,#ff3993);box-shadow:0 0 8px #ff358f77}
+.speed-ring{border-color:#6f9aca44;border-top-color:#55f2ed;border-right-color:#d666f4;background:radial-gradient(ellipse,#11234599,#14143355,transparent);box-shadow:inset 0 0 25px #3b70ff0d,0 0 20px #813af212}
+.speed-ring>span{color:#f78ce5}.speed-ring strong{color:#effeff;text-shadow:0 0 19px #3bdbff44}.speed-ring small,#view-label{color:#b0d1e9}.rev-track{background:#9676d638}.rev-track span{background:linear-gradient(90deg,#40f8e5,#e45cfd);box-shadow:0 0 8px #5af5ff66}
+.vehicle-health>span{color:#b2d5e8}.vehicle-health b{color:#7efae9}.vehicle-health>div{background:#6a67b83b}.vehicle-health>div>span{background:linear-gradient(90deg,#50e8f9,#6dffe1);box-shadow:0 0 8px #44f0eb77}.vehicle-health>small{color:#b2bfdc}
+.navigation{border-color:#4ac9dc55;background:linear-gradient(0deg,#10152ee6,#0b203a8a);box-shadow:0 0 21px #6331b225,inset 0 1px #71e9ef33}.navigation>span{color:#89f8ea}.navigation small{color:#a0bcde}
+.powerups span{background:linear-gradient(90deg,#142244df,#2416398c);color:#c3d1ee;border-color:#9d66e2}.powerups #shield-status.active{color:#5cffe2;border-color:#50ffe5;box-shadow:inset 0 0 18px #24d9c512,0 0 12px #16cbb315}.powerups #turbo-status.active{color:#ffd38c;border-color:#ffa343;box-shadow:inset 0 0 18px #fb922a12}
+#overlay{background:#070b208c}.panel{background:linear-gradient(145deg,#0d2037f7,#19102ef7);border-color:#5274be88;border-top-color:#57f6ea;box-shadow:0 25px 90px #0009,0 0 35px #8d38e425,inset -1px 0 #ed4bc65e;scrollbar-color:#7754b8 #111629}
+.panel h2{color:#eafcff;text-shadow:0 0 22px #7744da33}.panel p{color:#bacbe1}.panel label,.panel button{border-color:#7181c92b}.panel label{color:#dce9fa}.panel select,.panel input[type=url]{color:#dafbff;background:#111d3b;border-color:#6478bb88}.panel input[type=range],.panel input[type=checkbox]{accent-color:#66f3e6}.panel .muted{color:#a2b2d0}.panel dt,.garage-specs b,.results b{color:#7ff8ed}.panel dd{color:#c3cce5}.garage-specs>span,.results>span{color:#aab5d6}
+#toast{color:#e5fbff;border-color:#ef5ad2;background:linear-gradient(100deg,#10293fed,#2d153fea);box-shadow:0 0 20px #ba39c62b}
+@media(pointer:coarse){.distance-block{padding:6px 7px;max-width:125px}.touch-controls .touch-steering{border-color:#50e3e077;background:#0e1b36bb}.touch-controls .touch-steering button{background:#17334be6;color:#a6fdf7;border-color:#40e6e568}.touch-controls .touch-pedals button{background:#261d4be6;border-color:#b365d480;color:#e9deff}.touch-controls [data-key="KeyW"]{background:linear-gradient(140deg,#50f5e5,#65ccec)!important;color:#061d2b;border-color:#91fff0;box-shadow:0 0 18px #27ebdf24}.touch-controls [data-key="KeyS"]{background:#672b60ed!important;border-color:#ef79cf;color:#ffd7f0}.touch-controls button.is-held{background:#42dced!important;color:#061d2b;box-shadow:0 0 0 2px #8affef88,0 0 17px #1fe6e666}}
+@media(pointer:coarse) and (max-height:500px){.distance-block{padding:4px 7px}.speed-ring{box-shadow:none}}
+
+@media(pointer:coarse){
+  .touch-controls .touch-weapons{position:absolute;right:0;bottom:150px;display:flex;gap:8px;pointer-events:auto}
+  .touch-controls .touch-weapons button{width:68px;height:44px;font-size:9px;font-weight:700;letter-spacing:.4px;background:#321941ed;border:1px solid #fa64d3;border-radius:10px;color:#ffdcf6;box-shadow:0 0 12px #e63bc52e}
+}
+
+/* Keep driving instruments and essential controls clear of the road view. */
+body[data-state=playing] .header .brand, body[data-state=playing] .weather,
+#hud .drive-score, #hud .powerups, #hud .pursuit, #hud .vehicle-health,
+#hud #route-name, #hud #view-label, #hud .navigation>span, #hud .navigation small {display:none!important}
+body[data-state=playing] .header{justify-content:flex-end;pointer-events:none}
+body[data-state=playing] .header-right{pointer-events:auto}
+#hud .distance-block{top:max(20px,env(safe-area-inset-top));left:max(16px,env(safe-area-inset-left))}
+#hud .speedometer,body[data-view=cockpit] #hud .speedometer{left:max(16px,env(safe-area-inset-left));bottom:max(24px,env(safe-area-inset-bottom));top:auto;transform:none}
+#hud .navigation{display:flex;right:max(16px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom))}
+@media(pointer:coarse){
+ #hud .speedometer,body[data-view=cockpit] #hud .speedometer{bottom:145px;transform:scale(.7);transform-origin:bottom left}
+ #hud .navigation{bottom:210px;width:125px} #hud .navigation canvas{width:125px;height:103px}
+}
+@media(pointer:coarse) and (max-height:500px){
+ #hud .distance-block{top:8px} #hud .speedometer,body[data-view=cockpit] #hud .speedometer{top:74px;bottom:auto;transform:scale(.65);transform-origin:top left}
+ #hud .navigation{bottom:168px;width:100px} #hud .navigation canvas{width:100px;height:82px}
+}
+
+body[data-state=playing] #toast{clip-path:inset(50%);width:1px;height:1px;padding:0;overflow:hidden}
+
+#nitro-status{display:block;margin-top:7px;font-size:8px;letter-spacing:.8px;color:#85f8ff;text-shadow:0 0 8px #22dfffaa;white-space:nowrap}
+@media(pointer:coarse){#nitro-status{font-size:10px;margin-top:4px}.touch-controls .touch-weapons [data-nitro]{color:#07172b;background:linear-gradient(130deg,#66fff0,#e58bff);border-color:#aafbf6}}
+
+@media(pointer:coarse) and (max-height:500px){#hud .navigation{bottom:220px}}

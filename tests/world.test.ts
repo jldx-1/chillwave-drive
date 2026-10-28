@@ -11,7 +11,9 @@ describe('continuous deterministic metropolitan layout', () => {
     expect(cityChunk('CITY', 12)).not.toEqual(cityChunk('OTHER', 12));
     const chunks = Array.from({ length: 90 }, (_, id) => cityChunk('CITY', id));
     expect(new Set(chunks.flatMap(c => c.parcels.map(p => p.style)))).toEqual(new Set(['curtain', 'stepped', 'masonry', 'residential', 'rounded', 'garage', 'warehouse', 'fuel']));
-    expect(chunks.every(c => c.parcels.length >= 12)).toBe(true);
+    // Native-scale podiums occupy one or two plots per 120 m lane, rather than shrinking to three identical lots.
+    expect(chunks.every(c => c.parcels.length >= 6 && c.parcels.length <= 12)).toBe(true);
+    expect(new Set(chunks.flatMap(c=>c.parcels.flatMap(p=>p.assetId?[p.assetId]:[]))).size).toBe(100);
   });
   it('reserves the full ramp corridor and bridge cross streets before placing buildings', () => {
     for (let id = -4; id < 100; id++) {

@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import type { Quality } from './config';
 
-/** Fixed sun direction, a volume above the city roofs, and world-anchored shadow texels. */
+/** Fixed moonlight direction, a volume above the city roofs, and world-anchored shadow texels. */
 export class StableSunShadow {
-  readonly light = new THREE.DirectionalLight('#ffcfaa', 3);
+  readonly light = new THREE.DirectionalLight('#819fff', 1.1);
   readonly target = new THREE.Object3D();
   private offset = new THREE.Vector3(-140, 260, -320);
   private right = new THREE.Vector3();
@@ -46,9 +46,14 @@ export function colorPassReflection(reflector:THREE.Object3D):void {
   };
 }
 
-/** Reflection glazes and flame ribbons contribute color, not solid surfaces to the AO depth buffer. */
+/** Transparent overlays must not turn into solid occluders in an override-material pass. */
 export function withoutColorEffects<T>(scene:THREE.Scene,render:()=>T):T {
   const hidden:THREE.Object3D[]=[];
-  scene.traverse(object=>{if(object.visible&&object.userData.colorOnly){object.visible=false;hidden.push(object);}});
+  scene.traverse(object=>{
+    if (!object.visible) return;
+    const material = object instanceof THREE.Mesh ? object.material : undefined;
+    const overlay = material && (Array.isArray(material) ? material.length > 0 && material.every(m => m.transparent && !m.depthWrite) : material.transparent && !material.depthWrite);
+    if(object.userData.colorOnly || overlay){object.visible=false;hidden.push(object);}
+  });
   try{return render();}finally{for(const object of hidden)object.visible=true;}
 }

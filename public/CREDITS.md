@@ -1,3 +1,9 @@
+# Active futuristic fleet
+
+The 15 cyber vehicle prefabs, wheels, cockpit and lighting geometry in `src/drive/cyber-prefabs.ts` and `src/drive/reference-coachwork.ts` were authored for Chillwave Drive using the supplied concept sheets as visual references. The original geometry follows the project license. [Reusable GLB exports](models/cyber/manifest.json) include all fifteen identities at three detail levels and the player cockpit rig. Runtime traffic and the playable NEBULA XR use these prefabs. Contemporary GLBs listed below are retained as archived assets and authoring fixtures.
+
+Music is played from YouTube in its official embedded player and is not bundled or relicensed. Original sound effects remain project assets.
+
 # Chillwave Drive — asset credits
 
 ## Main car — Porsche 911 GT3
@@ -49,4 +55,4 @@ Third-party models were redistributed through the pedrosoandre/carros project. A
 
 ## Original content
 
-The police utility SUV, its authored geometry and fleet livery, the delivery truck, architectural modules, facade atlases, particles, sound effects and driving code were created for this project. The two original soundtrack compositions and recordings retain their separate [MIT audio notice](audio/LICENSE.txt). Three.js and the packaged fonts retain their respective upstream licenses.
+The police utility SUV, its authored geometry and fleet livery, the delivery truck, the procedural 100-building catalog interpreting the supplied architectural brief, architectural modules, facade and billboard atlases, modeled storefront interiors, skybridges, procedural flowering trees and palms, aerial vehicles, particles, sound effects and driving code were created for this project. The two original soundtrack compositions and recordings retain their separate [MIT audio notice](audio/LICENSE.txt). Three.js and the packaged fonts retain their respective upstream licenses.

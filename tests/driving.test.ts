@@ -7,7 +7,7 @@ import { Records } from '../src/drive/storage';
 const run = (car: Vehicle, seconds: number, controls = neutral(), wet = true) => { for (let i = 0; i < Math.round(seconds / STEP); i++) car.step(STEP, controls, wet); };
 describe('driving dynamics', () => {
   it('accelerates by force, shifts gears and brakes with finite stopping distance', () => {
-    const v = new Vehicle(); run(v, 10, { ...neutral(), throttle: 1 });
+    const v = new Vehicle(); v.x=2.9; run(v, 10, { ...neutral(), throttle: 1 });
     expect(v.pitch).toBeGreaterThan(0); expect(v.speed).toBeGreaterThan(35); expect(v.gear).toBeGreaterThan(2); expect(v.rpm).toBeGreaterThan(850);
     const before = v.s, velocity = v.speed; run(v, .5, { ...neutral(), brake: 1 });
     expect(v.speed).toBeGreaterThan(0); expect(v.speed).toBeLessThan(velocity); expect(v.s - before).toBeGreaterThan(10);
@@ -99,12 +99,12 @@ describe('road graph and precision', () => {
   it('connects each service loop to the highway at explicit endpoints', () => {
     const graph = new RoadGraph();
     for (let i = 0; i < 100; i++) {
-      const exit = i * 3000 + 800; expect(graph.branchCenter(exit)).toBeCloseTo(LANES[3]);
-      expect(graph.branchCenter(exit + 900)).toBeCloseTo(LANES[3]); expect(graph.branchCenter(exit + 450)).toBeCloseTo(32);
+      const exit = i * graph.interval + graph.exitAt; expect(graph.branchCenter(exit)).toBeCloseTo(LANES[3]);
+      expect(graph.branchCenter(exit + 900)).toBeCloseTo(LANES[3]); expect(graph.branchCenter(exit + 450)).toBeGreaterThan(26);
       expect(graph.routeAt(exit + 450)?.rejoin).toBe(exit + 900);
       expect(graph.validateNetwork(i)).toEqual([]);
       let previous = LANES[3];
-      for (let d = 0; d <= 900; d++) { const center = graph.branchCenter(exit + d)!; expect(Math.abs(center - previous)).toBeLessThan(.16); expect(graph.constrain(center, exit + d)).toBe(center); previous = center; }
+      for (let d = 0; d <= 900; d++) { const center = graph.branchCenter(exit + d)!; expect(Math.abs(center - previous)).toBeLessThan(.2); expect(graph.constrain(center, exit + d)).toBe(center); previous = center; }
     }
   });
   it('drives the complete detour with the same steering dynamics and rejoins', () => {

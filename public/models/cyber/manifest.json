@@ -1,0 +1,1653 @@
+{
+  "version": 2,
+  "frame": "metres, +Y up, -Z forward, road Y=0",
+  "source": "src/drive/reference-coachwork.ts",
+  "models": [
+    {
+      "id": "vortex",
+      "lod": 0,
+      "file": "vortex-lod0.glb",
+      "name": "VORTEX-9",
+      "bytes": 991428,
+      "sha256": "4f7d4a6c73f9e47af2417a48e41d7e814568ed9b2cf6dabf8240702adac2c269",
+      "vertices": 23954,
+      "triangles": 30152,
+      "meshes": 39,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1349999904632568,
+          0.012000010728836052,
+          -2.5355000495910645
+        ],
+        "max": [
+          1.1349999904632568,
+          1.3624999523162842,
+          2.5350000858306885
+        ]
+      },
+      "collision": {
+        "length": 4.9,
+        "width": 2.05,
+        "height": 1.35,
+        "mass": 1900
+      }
+    },
+    {
+      "id": "vortex",
+      "lod": 1,
+      "file": "vortex-lod1.glb",
+      "name": "VORTEX-9",
+      "bytes": 535616,
+      "sha256": "237eba86adb1063b838a8bc0936aa32580d802bc49038570fb6b1b6c8fd9ffa8",
+      "vertices": 12490,
+      "triangles": 16256,
+      "meshes": 34,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1349999904632568,
+          0.012000010728836052,
+          -2.5355000495910645
+        ],
+        "max": [
+          1.1349999904632568,
+          1.3624999523162842,
+          2.5225000381469727
+        ]
+      },
+      "collision": {
+        "length": 4.9,
+        "width": 2.05,
+        "height": 1.35,
+        "mass": 1900
+      }
+    },
+    {
+      "id": "vortex",
+      "lod": 2,
+      "file": "vortex-lod2.glb",
+      "name": "VORTEX-9",
+      "bytes": 93720,
+      "sha256": "885f986a0d2ab919242f2b7b822fa26218b96647500dd9ca6f2f44e6821cd6cd",
+      "vertices": 1983,
+      "triangles": 1844,
+      "meshes": 16,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0450000059604645,
+          0.012000010728836052,
+          -2.5225000381469727
+        ],
+        "max": [
+          1.0450000059604645,
+          1.3624999523162842,
+          2.5225000381469727
+        ]
+      },
+      "collision": {
+        "length": 4.9,
+        "width": 2.05,
+        "height": 1.35,
+        "mass": 1900
+      }
+    },
+    {
+      "id": "sentinel",
+      "lod": 0,
+      "file": "sentinel-lod0.glb",
+      "name": "SENTINEL-X",
+      "bytes": 966712,
+      "sha256": "984c43171c9694ace488d4c8dd6269bdf887f3e0388faa3b318e366ced97bbac",
+      "vertices": 23222,
+      "triangles": 29964,
+      "meshes": 39,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.2100000381469727,
+          0.011999992847442631,
+          -2.7355000972747803
+        ],
+        "max": [
+          1.2100000381469727,
+          1.965000033378601,
+          2.734999895095825
+        ]
+      },
+      "collision": {
+        "length": 5.3,
+        "width": 2.2,
+        "height": 1.9,
+        "mass": 3100
+      }
+    },
+    {
+      "id": "sentinel",
+      "lod": 1,
+      "file": "sentinel-lod1.glb",
+      "name": "SENTINEL-X",
+      "bytes": 535480,
+      "sha256": "f3aede829af6c0dfa3448b74465f12907f9824229d316f57ba02720a0c92602e",
+      "vertices": 12462,
+      "triangles": 16404,
+      "meshes": 34,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.2100000381469727,
+          0.011999992847442631,
+          -2.7355000972747803
+        ],
+        "max": [
+          1.2100000381469727,
+          1.965000033378601,
+          2.7225000858306885
+        ]
+      },
+      "collision": {
+        "length": 5.3,
+        "width": 2.2,
+        "height": 1.9,
+        "mass": 3100
+      }
+    },
+    {
+      "id": "sentinel",
+      "lod": 2,
+      "file": "sentinel-lod2.glb",
+      "name": "SENTINEL-X",
+      "bytes": 91920,
+      "sha256": "b699571649d43ebf45f06877940dbe6f85992009a8f07807c35ba1725f02d138",
+      "vertices": 1935,
+      "triangles": 1820,
+      "meshes": 16,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1200000059604647,
+          0.011999992847442631,
+          -2.7225000858306885
+        ],
+        "max": [
+          1.1200000059604647,
+          1.912500023841858,
+          2.7225000858306885
+        ]
+      },
+      "collision": {
+        "length": 5.3,
+        "width": 2.2,
+        "height": 1.9,
+        "mass": 3100
+      }
+    },
+    {
+      "id": "phantom",
+      "lod": 0,
+      "file": "phantom-lod0.glb",
+      "name": "PHANTOM-6",
+      "bytes": 927868,
+      "sha256": "963fda2f42ef224dbfa104e71bc7a9de42b655c9a852552b66fde7796d57da96",
+      "vertices": 22256,
+      "triangles": 28836,
+      "meshes": 38,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.100000023841858,
+          0.012000005960464466,
+          -2.434999942779541
+        ],
+        "max": [
+          1.100000023841858,
+          1.320997953414917,
+          2.434999942779541
+        ]
+      },
+      "collision": {
+        "length": 4.7,
+        "width": 1.98,
+        "height": 1.3,
+        "mass": 1700
+      }
+    },
+    {
+      "id": "phantom",
+      "lod": 1,
+      "file": "phantom-lod1.glb",
+      "name": "PHANTOM-6",
+      "bytes": 500280,
+      "sha256": "63dabd75ae6ef1b9be366809e01b4ad987f38dd2af71f8a8c97ceb02258797f1",
+      "vertices": 11616,
+      "triangles": 15256,
+      "meshes": 33,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.100000023841858,
+          0.012000005960464466,
+          -2.422499895095825
+        ],
+        "max": [
+          1.100000023841858,
+          1.320997953414917,
+          2.422499895095825
+        ]
+      },
+      "collision": {
+        "length": 4.7,
+        "width": 1.98,
+        "height": 1.3,
+        "mass": 1700
+      }
+    },
+    {
+      "id": "phantom",
+      "lod": 2,
+      "file": "phantom-lod2.glb",
+      "name": "PHANTOM-6",
+      "bytes": 89000,
+      "sha256": "6cd63e81afbef9178ac346161f97de9ff75296c8e6aafb6e0b107828281cf295",
+      "vertices": 1887,
+      "triangles": 1796,
+      "meshes": 15,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0100000059604644,
+          0.012000005960464466,
+          -2.422499895095825
+        ],
+        "max": [
+          1.0100000059604644,
+          1.2979999780654907,
+          2.422499895095825
+        ]
+      },
+      "collision": {
+        "length": 4.7,
+        "width": 1.98,
+        "height": 1.3,
+        "mass": 1700
+      }
+    },
+    {
+      "id": "barricade",
+      "lod": 0,
+      "file": "barricade-lod0.glb",
+      "name": "BARRICADE-12",
+      "bytes": 1204984,
+      "sha256": "b52204cedfc54bb9e2c45f8233129794b9dfb761be2009c67d7097e3e7b27f4e",
+      "vertices": 28846,
+      "triangles": 37556,
+      "meshes": 52,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_L_1",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_R_1",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.3350000381469727,
+          0.01200000000000001,
+          -3.2855000495910645
+        ],
+        "max": [
+          1.3350000381469727,
+          2.512500047683716,
+          3.2850000858306885
+        ]
+      },
+      "collision": {
+        "length": 6.4,
+        "width": 2.45,
+        "height": 2.5,
+        "mass": 6900
+      }
+    },
+    {
+      "id": "barricade",
+      "lod": 1,
+      "file": "barricade-lod1.glb",
+      "name": "BARRICADE-12",
+      "bytes": 633924,
+      "sha256": "0b208a2b1feebdb64845ea3c955508185523d9f72a2262e8e95f35847f80d231",
+      "vertices": 14680,
+      "triangles": 19204,
+      "meshes": 45,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_L_1",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_R_1",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.3350000381469727,
+          0.01200000000000001,
+          -3.2855000495910645
+        ],
+        "max": [
+          1.3350000381469727,
+          2.512500047683716,
+          3.2725000381469727
+        ]
+      },
+      "collision": {
+        "length": 6.4,
+        "width": 2.45,
+        "height": 2.5,
+        "mass": 6900
+      }
+    },
+    {
+      "id": "barricade",
+      "lod": 2,
+      "file": "barricade-lod2.glb",
+      "name": "BARRICADE-12",
+      "bytes": 102444,
+      "sha256": "c7ea0fa69cd74a7d197fac76069ba22ece16d5a8893e6f46fac2652e3fc5b6a3",
+      "vertices": 2117,
+      "triangles": 2052,
+      "meshes": 20,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_L_1",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_R_1",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.2450000059604647,
+          0.01200000000000001,
+          -3.2725000381469727
+        ],
+        "max": [
+          1.2450000059604647,
+          2.512500047683716,
+          3.2725000381469727
+        ]
+      },
+      "collision": {
+        "length": 6.4,
+        "width": 2.45,
+        "height": 2.5,
+        "mass": 6900
+      }
+    },
+    {
+      "id": "aurora",
+      "lod": 0,
+      "file": "aurora-lod0.glb",
+      "name": "AURORA LX",
+      "bytes": 917644,
+      "sha256": "6949b29e9f2044b2b84d5c1a6bac626934f2abde05332b02dc41582b181fe2d8",
+      "vertices": 21994,
+      "triangles": 28972,
+      "meshes": 36,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1100000143051147,
+          0.011999985694885251,
+          -2.684999942779541
+        ],
+        "max": [
+          1.1100000143051147,
+          1.470997929573059,
+          2.684999942779541
+        ]
+      },
+      "collision": {
+        "length": 5.2,
+        "width": 2,
+        "height": 1.45,
+        "mass": 2050
+      }
+    },
+    {
+      "id": "aurora",
+      "lod": 1,
+      "file": "aurora-lod1.glb",
+      "name": "AURORA LX",
+      "bytes": 510780,
+      "sha256": "be6216a39ed0ae9de3c55479a1eece87fc99912a5401344b000108bbebd11436",
+      "vertices": 11930,
+      "triangles": 15776,
+      "meshes": 31,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1100000143051147,
+          0.011999985694885251,
+          -2.672499895095825
+        ],
+        "max": [
+          1.1100000143051147,
+          1.470997929573059,
+          2.672499895095825
+        ]
+      },
+      "collision": {
+        "length": 5.2,
+        "width": 2,
+        "height": 1.45,
+        "mass": 2050
+      }
+    },
+    {
+      "id": "aurora",
+      "lod": 2,
+      "file": "aurora-lod2.glb",
+      "name": "AURORA LX",
+      "bytes": 75928,
+      "sha256": "5ec9ce64c9c4eb1b20af6cea33eade8a5036c63257fd695197ac44834bd8a113",
+      "vertices": 1551,
+      "triangles": 1628,
+      "meshes": 14,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0200000059604646,
+          0.011999985694885251,
+          -2.672499895095825
+        ],
+        "max": [
+          1.0200000059604646,
+          1.4479999542236328,
+          2.672499895095825
+        ]
+      },
+      "collision": {
+        "length": 5.2,
+        "width": 2,
+        "height": 1.45,
+        "mass": 2050
+      }
+    },
+    {
+      "id": "lumen",
+      "lod": 0,
+      "file": "lumen-lod0.glb",
+      "name": "LUMEN-E",
+      "bytes": 917360,
+      "sha256": "70bd143b666b7ef989cc59bedae4f4992b1510436a38aa21a3f981b94e6c00e6",
+      "vertices": 21946,
+      "triangles": 29196,
+      "meshes": 36,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0399999618530273,
+          0.01200000715255739,
+          -2.4100000858306885
+        ],
+        "max": [
+          1.0399999618530273,
+          1.5009979009628296,
+          2.4100000858306885
+        ]
+      },
+      "collision": {
+        "length": 4.65,
+        "width": 1.86,
+        "height": 1.48,
+        "mass": 1550
+      }
+    },
+    {
+      "id": "lumen",
+      "lod": 1,
+      "file": "lumen-lod1.glb",
+      "name": "LUMEN-E",
+      "bytes": 504976,
+      "sha256": "70ac41bcd621ff90bcb8bf6ad91b2a506239cb117666805f73e46769988abcae",
+      "vertices": 11738,
+      "triangles": 15832,
+      "meshes": 31,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0399999618530273,
+          0.01200000715255739,
+          -2.3975000381469727
+        ],
+        "max": [
+          1.0399999618530273,
+          1.5009979009628296,
+          2.3975000381469727
+        ]
+      },
+      "collision": {
+        "length": 4.65,
+        "width": 1.86,
+        "height": 1.48,
+        "mass": 1550
+      }
+    },
+    {
+      "id": "lumen",
+      "lod": 2,
+      "file": "lumen-lod2.glb",
+      "name": "LUMEN-E",
+      "bytes": 72876,
+      "sha256": "61e070879fed1eab1a4c00f2b4e3c2a19e60f26287c811cf9257e5983e6107b7",
+      "vertices": 1503,
+      "triangles": 1604,
+      "meshes": 13,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -0.9500000059604645,
+          0.01200000715255739,
+          -2.3975000381469727
+        ],
+        "max": [
+          0.9500000059604645,
+          1.4780000448226929,
+          2.3975000381469727
+        ]
+      },
+      "collision": {
+        "length": 4.65,
+        "width": 1.86,
+        "height": 1.48,
+        "mass": 1550
+      }
+    },
+    {
+      "id": "nebula",
+      "lod": 0,
+      "file": "nebula-lod0.glb",
+      "name": "NEBULA XR",
+      "bytes": 919712,
+      "sha256": "2bf39f339787476ba74fbd414b013d14898eddff104c4ddd8928406102e54c65",
+      "vertices": 22116,
+      "triangles": 28656,
+      "meshes": 36,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1100000143051147,
+          0.01200000119209288,
+          -2.359999895095825
+        ],
+        "max": [
+          1.1100000143051147,
+          1.2709980010986328,
+          2.359999895095825
+        ]
+      },
+      "collision": {
+        "length": 4.55,
+        "width": 2,
+        "height": 1.25,
+        "mass": 1480
+      }
+    },
+    {
+      "id": "nebula",
+      "lod": 1,
+      "file": "nebula-lod1.glb",
+      "name": "NEBULA XR",
+      "bytes": 511220,
+      "sha256": "1082affd6980cf9eaf8d42dccfd9f48baf95cd752f23770457a7d8571f82ec9a",
+      "vertices": 12004,
+      "triangles": 15436,
+      "meshes": 31,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1100000143051147,
+          0.01200000119209288,
+          -2.3475000858306885
+        ],
+        "max": [
+          1.1100000143051147,
+          1.2709980010986328,
+          2.3475000858306885
+        ]
+      },
+      "collision": {
+        "length": 4.55,
+        "width": 2,
+        "height": 1.25,
+        "mass": 1480
+      }
+    },
+    {
+      "id": "nebula",
+      "lod": 2,
+      "file": "nebula-lod2.glb",
+      "name": "NEBULA XR",
+      "bytes": 76332,
+      "sha256": "3c45e84dd06aa486d31c2a8272dc1da1adb2aee9130dd4c6a347a060e5137824",
+      "vertices": 1599,
+      "triangles": 1652,
+      "meshes": 13,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0200000059604646,
+          0.01200000119209288,
+          -2.3475000858306885
+        ],
+        "max": [
+          1.0200000059604646,
+          1.2480000257492065,
+          2.3475000858306885
+        ]
+      },
+      "collision": {
+        "length": 4.55,
+        "width": 2,
+        "height": 1.25,
+        "mass": 1480
+      }
+    },
+    {
+      "id": "vector",
+      "lod": 0,
+      "file": "vector-lod0.glb",
+      "name": "VECTOR GT",
+      "bytes": 933048,
+      "sha256": "66401bd88f80edd1de3929490471be18318c31ca5731c183ded905f37d59145a",
+      "vertices": 22500,
+      "triangles": 28848,
+      "meshes": 36,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1850000619888306,
+          0.012000005960464466,
+          -2.4600000381469727
+        ],
+        "max": [
+          1.1850000619888306,
+          1.1409980058670044,
+          2.4600000381469727
+        ]
+      },
+      "collision": {
+        "length": 4.75,
+        "width": 2.15,
+        "height": 1.12,
+        "mass": 1510
+      }
+    },
+    {
+      "id": "vector",
+      "lod": 1,
+      "file": "vector-lod1.glb",
+      "name": "VECTOR GT",
+      "bytes": 517832,
+      "sha256": "318820039eda18dab121013ea8b333a3665af047d20796fb6552738d66020095",
+      "vertices": 12196,
+      "triangles": 15532,
+      "meshes": 31,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1850000619888306,
+          0.012000005960464466,
+          -2.447499990463257
+        ],
+        "max": [
+          1.1850000619888306,
+          1.1409980058670044,
+          2.447499990463257
+        ]
+      },
+      "collision": {
+        "length": 4.75,
+        "width": 2.15,
+        "height": 1.12,
+        "mass": 1510
+      }
+    },
+    {
+      "id": "vector",
+      "lod": 2,
+      "file": "vector-lod2.glb",
+      "name": "VECTOR GT",
+      "bytes": 83060,
+      "sha256": "8d80f01286192b2f5c4fcfd0b1c85d5feb6cfa4f643a006ebab761a458f76e8d",
+      "vertices": 1791,
+      "triangles": 1748,
+      "meshes": 13,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0950000059604643,
+          0.012000005960464466,
+          -2.447499990463257
+        ],
+        "max": [
+          1.0950000059604643,
+          1.1180000305175781,
+          2.447499990463257
+        ]
+      },
+      "collision": {
+        "length": 4.75,
+        "width": 2.15,
+        "height": 1.12,
+        "mass": 1510
+      }
+    },
+    {
+      "id": "mira",
+      "lod": 0,
+      "file": "mira-lod0.glb",
+      "name": "MIRA-5",
+      "bytes": 910016,
+      "sha256": "3dc451fc0409dd52e53e14f40ced1a5e67760ccdad081b4d594b13ce157c5dea",
+      "vertices": 21678,
+      "triangles": 28976,
+      "meshes": 38,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0850000381469727,
+          0.01200000715255739,
+          -2.484999895095825
+        ],
+        "max": [
+          1.0850000381469727,
+          1.75,
+          2.484999895095825
+        ]
+      },
+      "collision": {
+        "length": 4.8,
+        "width": 1.95,
+        "height": 1.72,
+        "mass": 1950
+      }
+    },
+    {
+      "id": "mira",
+      "lod": 1,
+      "file": "mira-lod1.glb",
+      "name": "MIRA-5",
+      "bytes": 501700,
+      "sha256": "96cdf1af830cf96e45d0a646b8a726b9284bb999376c4408a2ab3ea0358355c5",
+      "vertices": 11622,
+      "triangles": 15688,
+      "meshes": 32,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0850000381469727,
+          0.01200000715255739,
+          -2.4725000858306885
+        ],
+        "max": [
+          1.0850000381469727,
+          1.75,
+          2.4725000858306885
+        ]
+      },
+      "collision": {
+        "length": 4.8,
+        "width": 1.95,
+        "height": 1.72,
+        "mass": 1950
+      }
+    },
+    {
+      "id": "mira",
+      "lod": 2,
+      "file": "mira-lod2.glb",
+      "name": "MIRA-5",
+      "bytes": 82208,
+      "sha256": "15c9994099e9cc3606bd3cce6a821da3b1b73dadf348edd188f22fd39f812f07",
+      "vertices": 1695,
+      "triangles": 1700,
+      "meshes": 15,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -0.9950000059604645,
+          0.01200000715255739,
+          -2.4725000858306885
+        ],
+        "max": [
+          0.9950000059604645,
+          1.75,
+          2.4725000858306885
+        ]
+      },
+      "collision": {
+        "length": 4.8,
+        "width": 1.95,
+        "height": 1.72,
+        "mass": 1950
+      }
+    },
+    {
+      "id": "pulse",
+      "lod": 0,
+      "file": "pulse-lod0.glb",
+      "name": "PULSE CARGO",
+      "bytes": 715348,
+      "sha256": "30c4559185c9abc00c471f219e224ab052bdbe8135189dc137c014e4d7f55575",
+      "vertices": 17061,
+      "triangles": 21336,
+      "meshes": 37,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.159999966621399,
+          0.012000004768371597,
+          -2.8350000381469727
+        ],
+        "max": [
+          1.159999966621399,
+          2.450997829437256,
+          2.8350000381469727
+        ]
+      },
+      "collision": {
+        "length": 5.5,
+        "width": 2.1,
+        "height": 2.45,
+        "mass": 3100
+      }
+    },
+    {
+      "id": "pulse",
+      "lod": 1,
+      "file": "pulse-lod1.glb",
+      "name": "PULSE CARGO",
+      "bytes": 485788,
+      "sha256": "f591ad09fea4c2a8984d7a8ed00e5db68f679c83131943dd498492005a7e16fc",
+      "vertices": 11251,
+      "triangles": 14988,
+      "meshes": 32,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.159999966621399,
+          0.012000004768371597,
+          -2.822499990463257
+        ],
+        "max": [
+          1.159999966621399,
+          2.450997829437256,
+          2.822499990463257
+        ]
+      },
+      "collision": {
+        "length": 5.5,
+        "width": 2.1,
+        "height": 2.45,
+        "mass": 3100
+      }
+    },
+    {
+      "id": "pulse",
+      "lod": 2,
+      "file": "pulse-lod2.glb",
+      "name": "PULSE CARGO",
+      "bytes": 76208,
+      "sha256": "8b3ac5f991ff48832314e307c69419b82227d4264b65e4210077ed492e1875b2",
+      "vertices": 1566,
+      "triangles": 1640,
+      "meshes": 14,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0799999964237212,
+          0.012000004768371597,
+          -2.822499990463257
+        ],
+        "max": [
+          1.0799999964237212,
+          2.427999973297119,
+          2.822499990463257
+        ]
+      },
+      "collision": {
+        "length": 5.5,
+        "width": 2.1,
+        "height": 2.45,
+        "mass": 3100
+      }
+    },
+    {
+      "id": "titan",
+      "lod": 0,
+      "file": "titan-lod0.glb",
+      "name": "TITAN-X",
+      "bytes": 1308032,
+      "sha256": "1161fd72a61bc3f1130686df73260e6e5bfe625f094702132172cdf3b35f97d0",
+      "vertices": 31155,
+      "triangles": 35764,
+      "meshes": 94,
+      "wheels": [
+        "Wheel_L_3",
+        "Wheel_L_4",
+        "Wheel_RL",
+        "Wheel_R_3",
+        "Wheel_R_4",
+        "Wheel_RR",
+        "Wheel_FL",
+        "Wheel_L_1",
+        "Wheel_L_2",
+        "Wheel_FR",
+        "Wheel_R_1",
+        "Wheel_R_2"
+      ],
+      "bounds": {
+        "min": [
+          -1.3600000143051147,
+          0.01200000000000001,
+          -8.585000038146973
+        ],
+        "max": [
+          1.3600000143051147,
+          3.930000066757202,
+          8.585000228881835
+        ]
+      },
+      "collision": {
+        "length": 17,
+        "width": 2.5,
+        "height": 3.95,
+        "mass": 16500
+      }
+    },
+    {
+      "id": "titan",
+      "lod": 1,
+      "file": "titan-lod1.glb",
+      "name": "TITAN-X",
+      "bytes": 803880,
+      "sha256": "c1db4c0ad98338fc30296cb30bff86e99bf0916eae0dc7eafe353cf84af7b00e",
+      "vertices": 18187,
+      "triangles": 23472,
+      "meshes": 79,
+      "wheels": [
+        "Wheel_L_3",
+        "Wheel_L_4",
+        "Wheel_RL",
+        "Wheel_R_3",
+        "Wheel_R_4",
+        "Wheel_RR",
+        "Wheel_FL",
+        "Wheel_L_1",
+        "Wheel_L_2",
+        "Wheel_FR",
+        "Wheel_R_1",
+        "Wheel_R_2"
+      ],
+      "bounds": {
+        "min": [
+          -1.3600000143051147,
+          0.01200000000000001,
+          -8.572500228881836
+        ],
+        "max": [
+          1.3600000143051147,
+          3.930000066757202,
+          8.572500419616699
+        ]
+      },
+      "collision": {
+        "length": 17,
+        "width": 2.5,
+        "height": 3.95,
+        "mass": 16500
+      }
+    },
+    {
+      "id": "titan",
+      "lod": 2,
+      "file": "titan-lod2.glb",
+      "name": "TITAN-X",
+      "bytes": 125508,
+      "sha256": "0dc3a42751335010c0536d49a88d05508ba33885ddf65646e1d1fbd1c303419b",
+      "vertices": 2398,
+      "triangles": 2368,
+      "meshes": 33,
+      "wheels": [
+        "Wheel_L_3",
+        "Wheel_L_4",
+        "Wheel_RL",
+        "Wheel_R_3",
+        "Wheel_R_4",
+        "Wheel_RR",
+        "Wheel_FL",
+        "Wheel_L_1",
+        "Wheel_L_2",
+        "Wheel_FR",
+        "Wheel_R_1",
+        "Wheel_R_2"
+      ],
+      "bounds": {
+        "min": [
+          -1.2799999964237214,
+          0.01200000000000001,
+          -8.572500228881836
+        ],
+        "max": [
+          1.2799999964237214,
+          3.930000066757202,
+          8.572500419616699
+        ]
+      },
+      "collision": {
+        "length": 17,
+        "width": 2.5,
+        "height": 3.95,
+        "mass": 16500
+      }
+    },
+    {
+      "id": "cargo",
+      "lod": 0,
+      "file": "cargo-lod0.glb",
+      "name": "CARGO-6",
+      "bytes": 856184,
+      "sha256": "1220db257fcfaaa4d8756abdf5cdbb6d12e16c9f634f30dec754ef9034f204f2",
+      "vertices": 20506,
+      "triangles": 24444,
+      "meshes": 49,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_L_1",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_R_1",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.3100000619888306,
+          0.011999991655349762,
+          -4.085000038146973
+        ],
+        "max": [
+          1.3100000619888306,
+          3.194999933242798,
+          4.085000038146973
+        ]
+      },
+      "collision": {
+        "length": 8,
+        "width": 2.4,
+        "height": 3.2,
+        "mass": 6700
+      }
+    },
+    {
+      "id": "cargo",
+      "lod": 1,
+      "file": "cargo-lod1.glb",
+      "name": "CARGO-6",
+      "bytes": 555872,
+      "sha256": "e071812b9bb6b365211de27af61e9eee2b2832bfd10def842914ed0fa825ea5a",
+      "vertices": 12852,
+      "triangles": 16464,
+      "meshes": 42,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_L_1",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_R_1",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.3100000619888306,
+          0.011999991655349762,
+          -4.072500228881836
+        ],
+        "max": [
+          1.3100000619888306,
+          3.194999933242798,
+          4.072500228881836
+        ]
+      },
+      "collision": {
+        "length": 8,
+        "width": 2.4,
+        "height": 3.2,
+        "mass": 6700
+      }
+    },
+    {
+      "id": "cargo",
+      "lod": 2,
+      "file": "cargo-lod2.glb",
+      "name": "CARGO-6",
+      "bytes": 98416,
+      "sha256": "a458c887ff69b8eaa617e72d84d1a5b394dc58c207875de45f53543cbffb358b",
+      "vertices": 2021,
+      "triangles": 2004,
+      "meshes": 19,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_L_1",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_R_1",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.2299999964237212,
+          0.011999991655349762,
+          -4.072500228881836
+        ],
+        "max": [
+          1.2299999964237212,
+          3.194999933242798,
+          4.072500228881836
+        ]
+      },
+      "collision": {
+        "length": 8,
+        "width": 2.4,
+        "height": 3.2,
+        "mass": 6700
+      }
+    },
+    {
+      "id": "orbit",
+      "lod": 0,
+      "file": "orbit-lod0.glb",
+      "name": "ORBIT SHUTTLE",
+      "bytes": 1078848,
+      "sha256": "20727e4e86fc9bca43e9b19da9efa4be028e94188e1e6cdded3836be4daba204",
+      "vertices": 25940,
+      "triangles": 34372,
+      "meshes": 38,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.3600000143051147,
+          0.012000011920928977,
+          -5.335000038146973
+        ],
+        "max": [
+          1.3600000143051147,
+          3.259999990463257,
+          5.335000038146973
+        ]
+      },
+      "collision": {
+        "length": 10.5,
+        "width": 2.5,
+        "height": 3.2,
+        "mass": 9200
+      }
+    },
+    {
+      "id": "orbit",
+      "lod": 1,
+      "file": "orbit-lod1.glb",
+      "name": "ORBIT SHUTTLE",
+      "bytes": 565216,
+      "sha256": "fb91302de1e0462e83eba3b9937e612e92fb701f2fca1cba8e4ae9aa70c0126e",
+      "vertices": 13204,
+      "triangles": 17840,
+      "meshes": 32,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.3600000143051147,
+          0.012000011920928977,
+          -5.322500228881836
+        ],
+        "max": [
+          1.3600000143051147,
+          3.259999990463257,
+          5.322500228881836
+        ]
+      },
+      "collision": {
+        "length": 10.5,
+        "width": 2.5,
+        "height": 3.2,
+        "mass": 9200
+      }
+    },
+    {
+      "id": "orbit",
+      "lod": 2,
+      "file": "orbit-lod2.glb",
+      "name": "ORBIT SHUTTLE",
+      "bytes": 74568,
+      "sha256": "56d0ac3b78cdb342be7b5e22464b1f03e7185b0c7408efd102e9a913d97eda59",
+      "vertices": 1551,
+      "triangles": 1628,
+      "meshes": 13,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.2700000059604646,
+          0.012000011920928977,
+          -5.322500228881836
+        ],
+        "max": [
+          1.2700000059604646,
+          3.128000020980835,
+          5.322500228881836
+        ]
+      },
+      "collision": {
+        "length": 10.5,
+        "width": 2.5,
+        "height": 3.2,
+        "mass": 9200
+      }
+    },
+    {
+      "id": "nova",
+      "lod": 0,
+      "file": "nova-lod0.glb",
+      "name": "NOVA-4",
+      "bytes": 926056,
+      "sha256": "9b8d5fa0c3d7103cb4bed67846877c82de9058f1f115e5669fe5d5654c5c564c",
+      "vertices": 22155,
+      "triangles": 29308,
+      "meshes": 37,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.159999966621399,
+          0.012000013113021846,
+          -2.884999990463257
+        ],
+        "max": [
+          1.159999966621399,
+          1.8646466732025146,
+          2.884999990463257
+        ]
+      },
+      "collision": {
+        "length": 5.6,
+        "width": 2.1,
+        "height": 1.85,
+        "mass": 2600
+      }
+    },
+    {
+      "id": "nova",
+      "lod": 1,
+      "file": "nova-lod1.glb",
+      "name": "NOVA-4",
+      "bytes": 516360,
+      "sha256": "da194ac2292b787e66ad1ab5fb02548a8fa031f7330dbeec1bac92a2f32807b6",
+      "vertices": 12073,
+      "triangles": 15720,
+      "meshes": 32,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.159999966621399,
+          0.012000013113021846,
+          -2.872499942779541
+        ],
+        "max": [
+          1.159999966621399,
+          1.8646466732025146,
+          2.872499942779541
+        ]
+      },
+      "collision": {
+        "length": 5.6,
+        "width": 2.1,
+        "height": 1.85,
+        "mass": 2600
+      }
+    },
+    {
+      "id": "nova",
+      "lod": 2,
+      "file": "nova-lod2.glb",
+      "name": "NOVA-4",
+      "bytes": 80636,
+      "sha256": "5dedde71a587aec310dd98709bfcfcc52814ab355f8c1da2accafe307cb10b0a",
+      "vertices": 1668,
+      "triangles": 1628,
+      "meshes": 15,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.0700000059604644,
+          0.012000013113021846,
+          -2.872499942779541
+        ],
+        "max": [
+          1.0700000059604644,
+          1.8380000591278076,
+          2.872499942779541
+        ]
+      },
+      "collision": {
+        "length": 5.6,
+        "width": 2.1,
+        "height": 1.85,
+        "mass": 2600
+      }
+    },
+    {
+      "id": "aegis",
+      "lod": 0,
+      "file": "aegis-lod0.glb",
+      "name": "AEGIS-7",
+      "bytes": 935420,
+      "sha256": "dae353f4700ede921910510cd922a0b72bd2678e00ed41183d7026b11522df6c",
+      "vertices": 22366,
+      "triangles": 29536,
+      "meshes": 38,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.2100000381469727,
+          0.011999992847442631,
+          -2.7850000858306885
+        ],
+        "max": [
+          1.2100000381469727,
+          2.115000009536743,
+          2.7850000858306885
+        ]
+      },
+      "collision": {
+        "length": 5.4,
+        "width": 2.2,
+        "height": 2.05,
+        "mass": 3300
+      }
+    },
+    {
+      "id": "aegis",
+      "lod": 1,
+      "file": "aegis-lod1.glb",
+      "name": "AEGIS-7",
+      "bytes": 529680,
+      "sha256": "cd57957ac03698ffbd237159c7ecc6e44b754be52a82dd0561b73097df476df0",
+      "vertices": 12334,
+      "triangles": 16340,
+      "meshes": 33,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.2100000381469727,
+          0.011999992847442631,
+          -2.7725000381469727
+        ],
+        "max": [
+          1.2100000381469727,
+          2.115000009536743,
+          2.7725000381469727
+        ]
+      },
+      "collision": {
+        "length": 5.4,
+        "width": 2.2,
+        "height": 2.05,
+        "mass": 3300
+      }
+    },
+    {
+      "id": "aegis",
+      "lod": 2,
+      "file": "aegis-lod2.glb",
+      "name": "AEGIS-7",
+      "bytes": 88904,
+      "sha256": "265ab004420b0b3dbc723972cd41b2fd2a957ded485d3508e99c37caafd5c783",
+      "vertices": 1887,
+      "triangles": 1796,
+      "meshes": 15,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1200000059604647,
+          0.011999992847442631,
+          -2.7725000381469727
+        ],
+        "max": [
+          1.1200000059604647,
+          2.0625,
+          2.7725000381469727
+        ]
+      },
+      "collision": {
+        "length": 5.4,
+        "width": 2.2,
+        "height": 2.05,
+        "mass": 3300
+      }
+    },
+    {
+      "id": "nebula",
+      "lod": "player",
+      "file": "nebula-player.glb",
+      "name": "NEBULA XR",
+      "bytes": 952092,
+      "sha256": "0ac260f5b86d2a5d4537b9b507c13f47330c50d07e907561ce2e19a551b29d0c",
+      "vertices": 22639,
+      "triangles": 29118,
+      "meshes": 49,
+      "wheels": [
+        "Wheel_FL",
+        "Wheel_RL",
+        "Wheel_FR",
+        "Wheel_RR"
+      ],
+      "bounds": {
+        "min": [
+          -1.1100000143051147,
+          0.01200000119209288,
+          -2.359999895095825
+        ],
+        "max": [
+          1.1100000143051147,
+          1.2709980010986328,
+          2.359999895095825
+        ]
+      },
+      "collision": {
+        "length": 4.55,
+        "width": 2,
+        "height": 1.25,
+        "mass": 1480
+      }
+    }
+  ]
+}

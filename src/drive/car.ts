@@ -2,14 +2,16 @@ import * as THREE from 'three';
 import type { Agent } from './traffic';
 import { buildPlayerCar, type PlayerCarRig } from './car-asset';
 import { animateFleetRig, buildFleetCar, disposeFleetRig, fleetKind, type FleetRig, type VehicleLOD } from './fleet-asset';
-import { VEHICLE_CATALOG } from './vehicle-catalog';
+import { CYBER_VEHICLES,cyberModel,type CyberModel } from './cyber-vehicles';
 import type { Vehicle } from './vehicle';
 import { RainGlass } from './rain-glass';
 import { BoostEffects } from './boost-effects';
 import { WIPER_AXIS, wiperSweep } from './weather';
+import { MPS_TO_MPH } from './units';
+import { VEHICLE_LAMPS } from './lamp-levels';
 
 let contactMaterial: THREE.MeshBasicMaterial | undefined;
-/** All coachwork is loaded from independent GLBs. This class only binds gameplay to the rig. */
+/** Gameplay binding for the original cyber fleet, cockpit and animated wheel/light rigs. */
 export class CarVisual {
   readonly group = new THREE.Group();
   readonly body = new THREE.Group();
@@ -24,6 +26,7 @@ export class CarVisual {
   readonly dashboard: THREE.CanvasTexture;
   readonly eye = new THREE.Vector3(-.4, 1.2, .2);
   ready: Promise<void> = Promise.resolve();
+  onVisualReady?: (group:THREE.Group)=>void;
   assetReady = false;
   assetFailed = false;
   private canvas = document.createElement('canvas');
@@ -44,7 +47,7 @@ export class CarVisual {
   private pitch = 0;
   private owned: THREE.BufferGeometry[] = [];
   private ownedMaterials: THREE.Material[] = [];
-  constructor(private color = '#394d71', readonly detailed = false, readonly kind: Agent['kind'] = 'sport') {
+  constructor(private color = '#394d71', readonly detailed = false, readonly kind: Agent['kind'] = 'sport',readonly model?:CyberModel) {
     this.group.add(this.body);
     if (!contactMaterial) {
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
@@ -52,7 +55,7 @@ export class CarVisual {
       gradient.addColorStop(0, '#00000080'); gradient.addColorStop(1, '#00000000'); ctx.fillStyle = gradient; ctx.fillRect(0, 0, 64, 64);
       contactMaterial = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true, depthWrite: false });
     }
-    const spec = VEHICLE_CATALOG[fleetKind(kind)];
+    const spec = CYBER_VEHICLES[cyberModel(fleetKind(kind),model)];
     const contactGeometry = new THREE.PlaneGeometry(detailed ? 2.7 : spec.width * 1.25, detailed ? 5.8 : spec.length * 1.18);
     this.owned.push(contactGeometry);
     const contact = new THREE.Mesh(contactGeometry, contactMaterial); contact.rotation.x = -Math.PI / 2; contact.position.y = .009; this.group.add(contact);
@@ -74,11 +77,11 @@ export class CarVisual {
       const rig = await buildPlayerCar(this.color);
       if (this.retired) { new Set(rig.owned).forEach(g => g.dispose()); rig.unique.forEach(m => m.dispose()); return; }
       this.player = rig; this.eye.copy(rig.eye);
-      this.boost?.setMounts(rig.wheels.filter(w=>w.position.z>0).map(w=>w.position));
+      this.boost?.setMounts((rig.group.userData.exhaustMounts as number[][]).map(v=>new THREE.Vector3(...v)));
       // The body and cockpit are sprung; wheel pivots remain planted at road height.
       const body = new THREE.Group(); body.name = 'SprungBody';
       for (const child of [...rig.group.children]) if (!rig.wheels.includes(child as THREE.Group)) body.add(child);
-      rig.group.add(body); this.sprung = body;
+      rig.group.add(body); this.sprung = body;if(this.boost)body.add(this.boost.group);
       this.rainGlass = new RainGlass(rig); this.group.add(rig.group);
       const displayGeometry = new THREE.PlaneGeometry(.34, .10); this.owned.push(displayGeometry);
       const displayMaterial = new THREE.MeshBasicMaterial({ map: this.dashboard }); this.ownedMaterials.push(displayMaterial);
@@ -92,11 +95,11 @@ export class CarVisual {
   private async loadFleet(lod: VehicleLOD): Promise<void> {
     const epoch = ++this.epoch;
     try {
-      const rig = await buildFleetCar(fleetKind(this.kind), this.color, lod);
+      const rig = await buildFleetCar(this.model??fleetKind(this.kind), this.color, lod);
       if (this.retired || epoch !== this.epoch) { disposeFleetRig(rig); return; }
       if (this.fleet) disposeFleetRig(this.fleet);
       this.fleet = rig; this.body.add(rig.group); this.wheels.splice(0, this.wheels.length, ...rig.wheels);
-      this.assetReady = true; this.assetFailed = false;
+      this.assetReady = true; this.assetFailed = false;this.onVisualReady?.(this.group);
     } catch { if (epoch === this.epoch) this.assetFailed = true; }
   }
   get detailLevel(): VehicleLOD { return this.detail; }
@@ -110,14 +113,15 @@ export class CarVisual {
   get weatherDiagnostics() { return this.rainGlass?.diagnostics ?? { drops: 0, blades: 0 }; }
   setPolice(active: boolean): void { this.police = active; }
   updateAgent(agent: Agent): void {
-    this.roll = agent.roll ?? 0; this.pitch = agent.pitch ?? 0; this.signal = agent.signal ?? 0;
+    this.roll = agent.roll ?? 0; this.pitch = agent.pitch ?? 0; this.signal = agent.signal ?? 0;if(this.fleet)this.fleet.trailerAngle=agent.trailerAngle;if(this.model==='aegis')this.police=!!agent.emergency;
   }
   updateDashboard(speed: number, gear: number, rpm = 850): void {
-    const value = Math.round(Math.abs(speed) * 3.6) + ':' + gear + ':' + Math.floor(rpm / 200);
+    const value = Math.round(Math.abs(speed) * MPS_TO_MPH) + ':' + gear + ':' + Math.floor(rpm / 200);
     if (value === this.dashValue || !this.detailed) return; this.dashValue = value;
     const ctx = this.canvas.getContext('2d')!;
     ctx.fillStyle = '#081118'; ctx.fillRect(0, 0, 512, 128);
     ctx.fillStyle = '#ffcf91'; ctx.font = 'bold 76px monospace'; ctx.textAlign = 'center'; ctx.fillText(value.split(':')[0], 205, 88);
+    ctx.font = '14px monospace'; ctx.fillText('MPH', 205, 103);
     ctx.fillStyle = '#f9ce96'; ctx.font = '32px monospace'; ctx.fillText(gear < 0 ? 'R' : 'D' + gear, 430, 75);
     ctx.fillStyle = '#4e5459'; ctx.fillRect(35, 108, 440, 4); ctx.fillStyle = '#e9b979'; ctx.fillRect(35, 108, 440 * Math.min(1, rpm / 7000), 4); this.dashboard.needsUpdate = true;
   }
@@ -132,7 +136,9 @@ export class CarVisual {
       this.player.wheels.forEach((w, i) => w.rotation.y = i % 2 === 0 ? steer : 0); this.player.spins.forEach(w => w.rotation.x = -this.wheelPhase);
       this.player.steering.quaternion.setFromAxisAngle(new THREE.Vector3(0, -.35, 1).normalize(), -steer * 5);
       this.player.wipers.forEach((w, i) => w.quaternion.setFromAxisAngle(new THREE.Vector3(...WIPER_AXIS).normalize(), wiperSweep(time, i, reduced)));
-      this.player.lamps.forEach(m => m.emissiveIntensity = braking ? 4 : .7);
+      this.player.reverseLamps?.forEach(m=>m.emissiveIntensity=speed<-.2?2:0);
+      this.player.turnLamps?.forEach(m=>m.emissiveIntensity=Math.abs(steer)>.12&&time%.8<.4&&m.userData.vehicleSide===(steer>0?'left':'right')?3:0);
+      this.player.lamps.forEach(m => m.emissiveIntensity = braking ? VEHICLE_LAMPS.brake : VEHICLE_LAMPS.tail);
       this.rainGlass?.update(dt, speed, sheltered, reduced);
     }
     this.red.color.set(this.police && time % .6 < .3 ? '#ff253a' : '#20262c');
@@ -142,7 +148,7 @@ export class CarVisual {
     this.boostPulse=vehicle.boostPulse;
     if (this.player) {
       this.player.damage.value = vehicle.damage / 100;
-      this.player.headlamps.forEach(m => m.emissiveIntensity = vehicle.headlights ? 2.5 : .02);
+      this.player.headlamps.forEach(m => m.emissiveIntensity = vehicle.headlights ? VEHICLE_LAMPS.head : .02);
       this.sprung?.rotation.set(steadyCockpit?0:vehicle.pitch, 0, steadyCockpit?0:vehicle.roll);
       this.player.paint.forEach(m => m.roughness = .21 + vehicle.damage * .002);
     }

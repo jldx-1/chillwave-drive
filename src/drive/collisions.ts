@@ -6,6 +6,16 @@ export interface Body2D {
   hull?: CollisionHull;
 }
 export interface Contact { a: number; b: number; x: number; s: number; nx: number; ns: number; speed: number; impulse: number; material: 'metal' | 'concrete' }
+/** Impulse catches particularly heavy impacts even when closing speed alone is moderate. */
+export function isSevereVehicleImpact(contact:Contact):boolean {
+  return contact.material==='metal' && (contact.speed>=30 || contact.impulse>=60000);
+}
+/** An unshielded car is also vulnerable to a strong frontal crash. */
+export function isFrontalCrash(contact: Contact, playerYaw: number): boolean {
+  const direction = contact.a === -1 ? 1 : -1;
+  return contact.material === 'metal' && (contact.a === -1 || contact.b === -1) && contact.speed >= 22 &&
+    direction * (contact.nx * Math.sin(playerYaw) + contact.ns * Math.cos(playerYaw)) > .85;
+}
 type Point = readonly [number, number];
 const dot = (ax: number, as: number, bx: number, bs: number) => ax * bx + as * bs;
 const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));

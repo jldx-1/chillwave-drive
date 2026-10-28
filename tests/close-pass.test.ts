@@ -8,7 +8,7 @@ function encounter(offset: number, kind: Agent['kind'] = 'sedan') {
   const traffic=new Traffic('CLOSE-PASS','low'), player=new Vehicle(); traffic.reset();
   const source=traffic.agents.find(a=>a.kind==='sedan') ?? traffic.agents[0];
   const x=player.x+offset;
-  const car:Agent={...source,...VEHICLE_DIMENSIONS[kind],kind,id:100,direction:1,x,oldX:x,targetX:x,s:12,oldS:12,
+  const car:Agent={...source,...VEHICLE_DIMENSIONS[kind],kind,model:undefined,id:100,direction:1,x,oldX:x,targetX:x,s:12,oldS:12,
     speed:20,desired:20,yaw:0,lateral:0,spin:0,damage:0,near:false,active:false,route:'main',routeId:undefined};
   traffic.agents=[car];player.speed=40;
   return {traffic,player,car};

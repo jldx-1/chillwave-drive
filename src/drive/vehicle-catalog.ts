@@ -1,4 +1,4 @@
-/** Runtime URLs are relative to Vite's Pages base; every vehicle is a local independent GLB. */
+/** Archived GLB provenance and authoring fixtures. Runtime models live in cyber-vehicles.ts. */
 export type FleetKind = 'sedan' | 'suv' | 'pickup' | 'truck' | 'hatchback' | 'sport' | 'police';
 export interface VehicleAssetSpec {
   path: string; length: number; width: number; height: number; wheelRadius: number; wheelbase: number; mass: number;

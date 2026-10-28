@@ -1,14 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { PLAYER_ASSET_PATH } from './vehicle-catalog';
+import { cyberPlayerPrefab } from './cyber-prefabs';
 
 let loaded: Promise<THREE.Group> | undefined;
-/** Locally served, attributed ChevroletSS GT3; decode only once per page. */
+/** Original playable NEBULA XR prefab, assembled once and shared across drives. */
 export function playerCarAsset(): Promise<THREE.Group> {
-  if (!loaded) loaded = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
-    .loadAsync(import.meta.env.BASE_URL + PLAYER_ASSET_PATH).then(g => g.scene);
+  if(!loaded)loaded=Promise.resolve(cyberPlayerPrefab());
   return loaded;
 }
 export interface PlayerCarRig {
@@ -17,6 +14,7 @@ export interface PlayerCarRig {
   mirror: THREE.BufferGeometry; sideMirrors: THREE.BufferGeometry[];
   damage: { value: number }; paint: THREE.MeshPhysicalMaterial[];
   lamps: THREE.MeshStandardMaterial[]; headlamps: THREE.MeshStandardMaterial[];
+  reverseLamps?:THREE.MeshStandardMaterial[];turnLamps?:THREE.MeshStandardMaterial[];
   windows: THREE.MeshPhysicalMaterial[]; unique: THREE.Material[]; owned: THREE.BufferGeometry[];
 }
 export async function buildPlayerCar(color: string): Promise<PlayerCarRig> {
@@ -177,10 +175,11 @@ export function rigPlayerCar(source: THREE.Group, color: string): PlayerCarRig {
 export function rigCanonicalPlayer(source: THREE.Group, color: string): PlayerCarRig {
   const copy = source.clone(true), roots: THREE.Group[] = [];
   copy.traverse(o => { if (o.userData.playerRig) roots.push(o as THREE.Group); });
-  const group = roots[0]; if (!group) throw new Error('Player GLB has no canonical rig metadata');
+  const group = roots[0]; if (!group) throw new Error('Player prefab has no rig metadata');
   group.removeFromParent();
   const damage = { value: 0 }, unique: THREE.Material[] = [], paint: THREE.MeshPhysicalMaterial[] = [];
   const lamps: THREE.MeshStandardMaterial[] = [], headlamps: THREE.MeshStandardMaterial[] = [], windows: THREE.MeshPhysicalMaterial[] = [];
+  const reverseLamps:THREE.MeshStandardMaterial[]=[],turnLamps:THREE.MeshStandardMaterial[]=[];
   const cache = new Map<THREE.Material, THREE.MeshPhysicalMaterial>();
   group.traverse(o => {
     if (!(o instanceof THREE.Mesh)) return;
@@ -201,9 +200,10 @@ export function rigCanonicalPlayer(source: THREE.Group, color: string): PlayerCa
           shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nvec2 cells=carSurface.xz*150.;vec2 bead=fract(cells)-.5;float water=smoothstep(.24,.06,length(bead))*step(.978,fract(sin(dot(floor(cells),vec2(12.9898,78.233)))*43758.5453));normal=normalize(normal+vec3(bead*water*.14,0.));roughnessFactor=mix(roughnessFactor,.08,water);');
         };
       }
-      if (role === 'window' || /EXT_Glass_Windows/.test(m.name)) windows.push(m);
+      if (role === 'window' || role==='glass' || /EXT_Glass_Windows/.test(m.name)) {m.color.set('#b3cedc');m.transparent=true;m.opacity=.13;m.depthWrite=false;m.side=THREE.DoubleSide;windows.push(m);}
       if (role === 'head') headlamps.push(m);
       if (role === 'brake') lamps.push(m);
+      if(role==='reverse')reverseLamps.push(m);if(role==='turn')turnLamps.push(m);
       unique.push(m); cache.set(original, m); return m;
     };
     o.material = Array.isArray(o.material) ? o.material.map(material) : material(o.material);
@@ -216,5 +216,5 @@ export function rigCanonicalPlayer(source: THREE.Group, color: string): PlayerCa
   return { group, scale: Number(group.userData.scale), eye: new THREE.Vector3().fromArray(group.userData.eye),
     wheels, spins, steering: get('Steering') as THREE.Group, wipers: [get('Wiper_0'), get('Wiper_1')] as THREE.Group[],
     mirror: mirrorGeometry('Mirror_Center'), sideMirrors: [mirrorGeometry('Mirror_Left'), mirrorGeometry('Mirror_Right')],
-    damage, paint, lamps, headlamps, windows, unique, owned: [] };
+    damage, paint, lamps, headlamps, reverseLamps,turnLamps,windows, unique, owned: [] };
 }

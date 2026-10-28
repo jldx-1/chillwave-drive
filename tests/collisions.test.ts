@@ -1,9 +1,8 @@
 import { describe,it,expect } from 'vitest';
-import { solveContact,type Body2D } from '../src/drive/collisions';
+import { solveContact,isSevereVehicleImpact,type Body2D } from '../src/drive/collisions';
 import { Traffic } from '../src/drive/traffic';
 import { Vehicle } from '../src/drive/vehicle';
 import { STEP } from '../src/drive/config';
-import { roadsideObstacles } from '../src/drive/road';
 import { buildingSpec } from '../src/drive/buildings';
 const body=(id:number,overrides:Partial<Body2D>={}):Body2D=>({id,x:6.5,s:0,oldX:6.5,oldS:0,vx:0,vs:0,yaw:0,spin:0,mass:1500,width:1.95,length:4.6,...overrides});
 describe('momentum and crash response',()=>{
@@ -35,12 +34,10 @@ describe('momentum and crash response',()=>{
   it('separates resting overlap without inventing momentum',()=>{
     const a=body(0),b=body(1,{s:3});const before=b.s-a.s;solveContact(a,b);expect(b.s-a.s).toBeGreaterThan(before);expect(a.vs+b.vs).toBe(0);
   });
-  it('integrates traffic-to-traffic collisions and fixed roadside obstacles',()=>{
+  it('integrates traffic-to-traffic collisions',()=>{
     const t=new Traffic('COLLIDE'),p=new Vehicle();t.reset();const a=t.agents.find(a=>a.kind==='sedan')??t.agents[2],b=t.agents.find(v=>v!==a&&v.direction===a.direction)!;
     a.direction=b.direction=1;a.x=b.x=6.5;a.targetX=b.targetX=6.5;a.s=50;b.s=54;a.speed=40;b.speed=5;t.agents=[a,b];p.s=-30;p.previous={x:p.x,s:-30,yaw:0};
     const result=t.step(STEP,p,0);expect(result.contacts.length).toBeGreaterThan(0);expect(b.speed).toBeGreaterThan(5);expect(a.speed).toBeLessThan(40);
-    const obstacle=roadsideObstacles(3075)[0];expect(obstacle).toBeDefined();t.agents=[];p.x=obstacle.x;p.s=obstacle.s-1;p.previous={x:p.x,s:obstacle.s-5,yaw:0};p.speed=30;
-    expect(t.step(STEP,p,1).contacts.some(c=>c.material==='concrete')).toBe(true);expect(p.speed).toBeLessThan(20);expect(p.damage).toBeGreaterThan(0);
   });
   it('full damage preserves acceleration, braking and steering in either direction',()=>{
     for(const steer of [-1,1]){
@@ -89,4 +86,31 @@ describe('oriented collision accuracy',()=>{
     const a=body(0,{s:0,oldS:0,vs:-10}),b=body(1,{s:6,oldS:4.5,vs:10});
     expect(solveContact(a,b)).toBeUndefined();expect(a.vs).toBe(-10);expect(b.vs).toBe(10);
   });
+});
+
+describe('high-energy vehicle crashes', () => {
+  it('recognizes a high-impulse heavy impact even at moderate closing speed', () => {
+    const c={a:1,b:2,x:0,s:0,nx:0,ns:1,speed:20,impulse:65000,material:'metal' as const};
+    expect(isSevereVehicleImpact(c)).toBe(true);
+    expect(isSevereVehicleImpact({...c,impulse:5000})).toBe(false);
+    expect(isSevereVehicleImpact({...c,material:'concrete'})).toBe(false);
+  });
+  it('destroys traffic cars in a hard car-to-car collision while preserving traffic capacity', () => {
+    const t=new Traffic('CRASH'),p=new Vehicle();t.reset();const [a,b]=t.agents;
+    Object.assign(a,{x:6.5,targetX:6.5,s:50,speed:60,desired:60,direction:1,yaw:0});
+    Object.assign(b,{x:6.5,targetX:6.5,s:54,speed:0,desired:0,direction:1,yaw:0});
+    t.agents=[a,b];p.s=-30;p.previous={x:p.x,s:-30,yaw:0};
+    const event=t.step(STEP,p,0);
+    expect(event.explosions.map(e=>e.id).sort()).toEqual([a.id,b.id].sort());
+    expect(t.agents).toHaveLength(2);expect(t.agents).not.toContain(a);expect(t.agents).not.toContain(b);
+  });
+});
+
+it('keeps swept traffic collisions at high speed when a car crosses the entire vehicle in one step', () => {
+  const traffic=new Traffic('SWEEP','low'),player=new Vehicle();traffic.reset();const agent=traffic.agents.find(a=>a.direction===1)!;
+  Object.assign(agent,{x:6.5,targetX:6.5,s:50,speed:0,desired:0,direction:1,yaw:0});traffic.agents=[agent];
+  player.previous={x:6.5,s:0,yaw:0};player.x=6.5;player.s=100;player.speed=60;
+  const hit=traffic.step(STEP,player,0);
+  expect(hit.contacts.some(contact=>contact.a===-1&&contact.b===agent.id)).toBe(true);
+  expect(player.exploded).toBe(true);
 });

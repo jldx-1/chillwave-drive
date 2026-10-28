@@ -1,3 +1,4 @@
+import { startDrive, waitForDrive } from './helpers';
 import { test, expect } from '@playwright/test';
 
 for (const prefix of ['/chillwave-drive/', '/vaporwave-parkour/']) {
@@ -26,8 +27,8 @@ for (const prefix of ['/chillwave-drive/', '/vaporwave-parkour/']) {
     await page.addInitScript(() => localStorage.setItem('chillwave-drive:settings:v1', JSON.stringify({ quality: 'low', density: 'low', musicEnabled: true })));
     await page.clock.install(); await page.clock.pauseAt(new Date());
     await page.goto(`${host}${prefix}?qa&seed=PAGES`);
-    await expect.poll(() => page.evaluate(() => window.__drive.inspect().fleetReady),{timeout:30000}).toBe(true);
-    await page.getByRole('button', { name: 'START DRIVE' }).click();
+    await waitForDrive(page);
+    await startDrive(page);
     await expect.poll(() => loaded.filter(p => p.endsWith('.wav')).length).toBeGreaterThanOrEqual(4);
     await page.keyboard.down('w');
     await page.evaluate(() => window.__drive.advance(2));

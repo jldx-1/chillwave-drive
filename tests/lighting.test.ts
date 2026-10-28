@@ -1,3 +1,4 @@
+import { CYBER_VEHICLES } from '../src/drive/cyber-vehicles';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { StableSunShadow, colorPassReflection, withoutColorEffects } from '../src/drive/stable-lighting';
@@ -9,7 +10,7 @@ function cars():Agent[]{
   const source=traffic.agents.find(a=>a.kind==='police')!;
   return [10,11,40].map((s,id)=>({...source,id,s,oldS:s,x:6.5,oldX:6.5,yaw:0,active:true}));
 }
-describe('stable sunlight and reflection passes',()=>{
+describe('stable night lighting and reflection passes',()=>{
   it('anchors shadow projection texels in world space instead of crawling with the camera',()=>{
     const sun=new StableSunShadow();sun.update(8.31,1034.71,1000);
     const before=sun.target.position.clone(),basis=new THREE.Matrix4().lookAt(sun.light.position,sun.target.position,THREE.Object3D.DEFAULT_UP);
@@ -23,7 +24,7 @@ describe('stable sunlight and reflection passes',()=>{
     sun.update(8.3,1000.1,1000);
     expect(sun.target.position.x).toBeCloseTo(before.x,8);expect(sun.target.position.z-before.z).toBeCloseTo(1000,8);
     expect(sun.light.position.clone().sub(sun.target.position).distanceTo(direction)).toBeLessThan(1e-8);
-    expect(sun.light.position.y).toBeGreaterThan(200);expect(sun.light.shadow.camera.far).toBe(900);expect(sun.light.intensity).toBe(3);
+    expect(sun.light.position.y).toBeGreaterThan(200);expect(sun.light.shadow.camera.far).toBe(900);expect(sun.light.intensity).toBe(1.1);
   });
   it('does not overwrite a color reflection during a normal or depth pass',()=>{
     const object=new THREE.Object3D(),scene=new THREE.Scene();let updates=0;
@@ -54,12 +55,12 @@ describe('fluid traffic illumination',()=>{
     const beam=lighting.group.children[4]as THREE.SpotLight;
     expect(beam.intensity).toBeGreaterThan(21);
     // Reordering candidates does not move an assigned beam.
-    lighting.update([...agents].reverse(),0,0,2,'high');expect(beam.position.z).toBeCloseTo(-12.2,8);
+    lighting.update([...agents].reverse(),0,0,2,'high');expect(beam.position.z).toBeCloseTo(-10-CYBER_VEHICLES[agents[0].model!].length/2-.12,8);
     agents[0].s=agents[0].oldS=60;agents[2].s=agents[2].oldS=0;
     let reassigned=false;
     for(let i=0;i<90;i++){
       lighting.update(agents,0,0,2+i/60,'high');
-      if(Math.abs(beam.position.z+2.2)<1e-6){expect(beam.intensity).toBe(0);reassigned=true;break;}
+      if(Math.abs(beam.position.z+CYBER_VEHICLES[agents[2].model!].length/2+.12)<1e-6){expect(beam.intensity).toBe(0);reassigned=true;break;}
     }
     expect(reassigned).toBe(true);
     lighting.update(agents,0,0,4,'high');expect(beam.intensity).toBeGreaterThan(0);expect(beam.intensity).toBeLessThan(4);
@@ -79,7 +80,7 @@ describe('fluid traffic illumination',()=>{
     Object.assign(agents[0],{oldX:3,x:7,oldS:36,s:40});
     lighting.update(agents,0,0,0,'high',1/60,.25);
     const beam=lighting.group.children[4]as THREE.SpotLight;
-    expect(beam.position.x).toBe(4);expect(beam.position.z).toBeCloseTo(-39.2,8);
+    expect(beam.position.x).toBe(4);expect(beam.position.z).toBeCloseTo(-37-CYBER_VEHICLES[agents[0].model!].length/2-.12,8);
   });
 });
 
@@ -92,4 +93,22 @@ it('excludes color effects from auxiliary depth and restores visibility even on 
     throw new Error('auxiliary pass failed');
   })).toThrow('auxiliary pass failed');
   expect(glaze.visible).toBe(true);expect(fire.visible).toBe(true);expect(hidden.visible).toBe(false);
+});
+
+it('keeps rain ripples, contact shadows, glass and shield overlays out of solid AO while retaining opaque surfaces', () => {
+  const scene = new THREE.Scene();
+  const overlay = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false });
+  const ripple = new THREE.InstancedMesh(new THREE.PlaneGeometry(), overlay, 1);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(), overlay);
+  const paint = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
+  const hidden = new THREE.Mesh(new THREE.PlaneGeometry(), overlay); hidden.visible = false;
+  scene.add(ripple, glass, paint, hidden);
+  withoutColorEffects(scene, () => {
+    expect(ripple.visible).toBe(false); expect(glass.visible).toBe(false); expect(paint.visible).toBe(true);
+    withoutColorEffects(scene, () => expect(ripple.visible).toBe(false));
+    expect(ripple.visible).toBe(false);
+  });
+  expect(ripple.visible).toBe(true); expect(glass.visible).toBe(true); expect(hidden.visible).toBe(false);
+  scene.traverse(object => { if (object instanceof THREE.Mesh) object.geometry.dispose(); });
+  overlay.dispose(); (paint.material as THREE.Material).dispose();
 });

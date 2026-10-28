@@ -1,5 +1,6 @@
-import { LANES, ONCOMING, clamp } from './config';
+import { LANES, ONCOMING, TUNE, clamp } from './config';
 import type { CollisionHull } from './collision-profiles';
+import { constrainMedian } from './median';
 
 export type RoadPhase = 'highway' | 'deceleration' | 'exit' | 'service' | 'return' | 'acceleration';
 export interface RoadNode { id: string; x: number; s: number; kind: 'boundary' | 'junction' | 'connector' }
@@ -9,7 +10,7 @@ export interface RoadNetwork { id: number; nodes: RoadNode[]; edges: RoadEdge[];
 export interface RoadSample { x: number; s: number; tangentX: number; tangentS: number; width: number; curvature: number; speedLimit: number; phase: RoadPhase }
 export interface Route {
   id: number; exit: number; rejoin: number; kind: 'detour'; entryEnd: number; mergeStart: number;
-  district: 'commercial' | 'industrial'; edges: string[];
+  district: 'commercial' | 'industrial'; name: string; edges: string[];
 }
 interface Phase { kind: Exclude<RoadPhase, 'highway'>; a: number; b: number; x0: number; x1: number; speed: number }
 const outerLane = LANES[LANES.length - 1];
@@ -20,24 +21,35 @@ const phases: Phase[] = [
   { kind: 'return', a: 620, b: 800, x0: 32, x1: 17.3, speed: 24 },
   { kind: 'acceleration', a: 800, b: 900, x0: 17.3, x1: outerLane, speed: 36 },
 ];
+// Each exit is a continuous northbound street with a different offset and bend.
+const phaseVariants: Phase[][] = [phases, ...([[36,36],[35,28]] as const).map(([entry,end]) =>
+  phases.map(p => p.kind === 'exit' ? { ...p, x1: entry } :
+    p.kind === 'service' ? { ...p, x0: entry, x1: end } :
+    p.kind === 'return' ? { ...p, x0: end } : p))];
+const routePhases = (id:number):Phase[] => phaseVariants[((id % 3) + 3) % 3];
+const routeNames = ['NEON MARKET STREET', 'INDUSTRIAL ACCESS', 'CANAL DISTRICT'] as const;
 const routeEdge = (id: number, phase: RoadPhase) => `detour:${id}:${phase}`;
 /** Directed lane topology and the centerline geometry used by physics, rendering, and navigation. */
 export class RoadGraph {
-  constructor(readonly interval = 3000, readonly exitAt = 800, readonly detourLength = 900) {}
+  private readonly routeCache = new Map<number, Route>();
+  constructor(readonly interval = 1800, readonly exitAt = 800, readonly detourLength = 900) {}
   private route(id: number): Route {
+    const cached=this.routeCache.get(id);if(cached)return cached;
     const exit = id * this.interval + this.exitAt, scale = this.detourLength / 900;
-    return { id, exit, rejoin: exit + this.detourLength, entryEnd: exit + 100 * scale,
-      mergeStart: exit + 800 * scale, kind: 'detour', district: id % 2 === 0 ? 'commercial' : 'industrial',
-      edges: phases.map(p => routeEdge(id, p.kind)) };
+    const result:Route = { id, exit, rejoin: exit + this.detourLength, entryEnd: exit + 100 * scale,
+      mergeStart: exit + 800 * scale, kind: 'detour', district: id % 2 === 0 ? 'commercial' : 'industrial', name: routeNames[((id % 3) + 3) % 3],
+      edges: routePhases(id).map(p => routeEdge(id, p.kind)) };
+    if(this.routeCache.size>=8)this.routeCache.delete(this.routeCache.keys().next().value!);
+    this.routeCache.set(id,result);return result;
   }
   routeAt(s: number): Route | undefined {
-    const route = this.route(Math.floor(s / this.interval));
-    return s >= route.exit && s <= route.rejoin ? route : undefined;
+    const id=Math.floor(s/this.interval),exit=id*this.interval+this.exitAt;
+    return s>=exit&&s<=exit+this.detourLength ? this.route(id) : undefined;
   }
   /** Route selection happens before the diverging exit, while the outer lane is reachable. */
   entryWindow(s: number): Route | undefined {
-    const route = this.route(Math.floor(s / this.interval));
-    return s >= route.exit - 180 && s <= route.exit + 35 * this.detourLength / 900 ? route : undefined;
+    const id=Math.floor(s/this.interval),exit=id*this.interval+this.exitAt;
+    return s>=exit-180&&s<=exit+35*this.detourLength/900 ? this.route(id) : undefined;
   }
   mergeWindow(s: number): Route | undefined {
     const route = this.routeAt(s);
@@ -46,7 +58,8 @@ export class RoadGraph {
   sampleDetour(s: number): RoadSample | undefined {
     const route = this.routeAt(s); if (!route) return;
     const scale = this.detourLength / 900, d = (s - route.exit) / scale;
-    const phase = phases.find(p => d < p.b) ?? phases[phases.length - 1];
+    const routeShape = routePhases(route.id);
+    const phase = routeShape.find(p => d < p.b) ?? routeShape[routeShape.length - 1];
     const u = clamp((d - phase.a) / (phase.b - phase.a), 0, 1), distance = (phase.b - phase.a) * scale;
     // Quintic transitions have zero first and second derivatives at every connection.
     const smooth = u * u * u * (10 - 15 * u + 6 * u * u);
@@ -71,6 +84,12 @@ export class RoadGraph {
     if (ranges.some(([a, b]) => x >= a && x <= b)) return x;
     return ranges.map(([a, b]) => clamp(x, a, b)).sort((a, b) => Math.abs(a - x) - Math.abs(b - x))[0];
   }
+  constrainPlayer(x: number, s: number, oldX: number, time: number, held?: number): number {
+    const paved = x < 1.25 ? Math.max(-15.45, x) : this.constrain(x, s);
+    return constrainMedian(paved, s, oldX, time, held);
+  }
+  /** Above the median, retain the roadway edges without clamping crossings to one carriageway. */
+  constrainAirborne(x:number,s:number):number { return x < 1.25 ? clamp(x,-15.45,1.25) : this.constrain(x,s); }
   /** Keep the whole pursuing SUV inside its committed paved corridor, including yaw and root offsets. */
   policeBounds(s: number, yaw: number, hull: CollisionHull, route: 'main' | 'detour'): [number, number] {
     let lo = -Infinity, hi = Infinity;
@@ -109,11 +128,11 @@ export class RoadGraph {
     for (const direction of [1, -1] as const) for (let lane = 0; lane < 4; lane++) {
       const x = (direction === 1 ? LANES : ONCOMING)[lane], stations = [start, route.exit, route.rejoin, end];
       const keys = stations.map(at => node(`highway:${direction}:${lane}:${at}`, x, at, at === start || at === end ? 'boundary' : 'junction'));
-      for (let part = 0; part < stations.length - 1; part++) add(`main:${id}:${direction}:${lane}:${part}`, keys[direction === 1 ? part : part + 1], keys[direction === 1 ? part + 1 : part], 'highway', stations[part], stations[part + 1], direction, 78, lane);
+      for (let part = 0; part < stations.length - 1; part++) add(`main:${id}:${direction}:${lane}:${part}`, keys[direction === 1 ? part : part + 1], keys[direction === 1 ? part + 1 : part], 'highway', stations[part], stations[part + 1], direction, TUNE.maxSpeed, lane);
     }
     let previous = `highway:1:3:${route.exit}`;
     const scale = this.detourLength / 900;
-    for (const phase of phases) {
+    for (const phase of routePhases(id)) {
       const a = route.exit + phase.a * scale, b = route.exit + phase.b * scale;
       const next = phase.kind === 'acceleration' ? `highway:1:3:${route.rejoin}` : node(`connector:${id}:${phase.kind}`, phase.x1, b, 'connector');
       add(routeEdge(id, phase.kind), previous, next, phase.kind, a, b, 1, phase.speed, 0); previous = next;
@@ -164,11 +183,5 @@ export function overpassesAt(s: number): Overpass[] {
     const center = id * 120 + 60;
     result.push({ id, s: center, x: 0, width: road.routeAt(center) ? 84 : 70, length: 13, underside: 8.3, thickness: 1.4 });
   }
-  return result;
-}
-export interface RoadObstacle { id: number; x: number; s: number; width: number; length: number }
-export function roadsideObstacles(s: number): RoadObstacle[] {
-  const current = Math.floor(s / 120), result: RoadObstacle[] = [];
-  for (let id = current - 2; id <= current + 3; id++) if (id >= 8 && id % 17 === 8 && !road.routeAt(id * 120 + 75)) result.push({ id: -10000 - id, x: 14.35, s: id * 120 + 75, width: 1.6, length: 3 });
   return result;
 }

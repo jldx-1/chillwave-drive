@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { buildPoliceCar, isSharedPoliceResource, POLICE_SOURCE_WHEEL_RADIUS } from '../src/drive/police-car';
-import { POLICE_SIZE } from '../src/drive/config';
+import { COLLISION_PROFILES } from '../src/drive/collision-profiles';
+const POLICE_SIZE=COLLISION_PROFILES.police;
+import { CYBER_VEHICLES } from '../src/drive/cyber-vehicles';
 import { Traffic } from '../src/drive/traffic';
 import { policeFacePanel, policeRoof, policeCabinSide } from '../src/drive/police-body';
 const lamps = () => ({ head: new THREE.MeshBasicMaterial(), brake: new THREE.MeshStandardMaterial(), red: new THREE.MeshBasicMaterial(), blue: new THREE.MeshBasicMaterial() });
@@ -25,7 +27,7 @@ describe('police utility SUV', () => {
       expect(b.max.y).toBeCloseTo(2 * POLICE_SOURCE_WHEEL_RADIUS, 5);
     }
     const traffic = new Traffic('UTILITY', 'low'); traffic.reset();
-    expect(traffic.agents.filter(a => a.kind === 'police').every(a => a.width === POLICE_SIZE.width && a.length === POLICE_SIZE.length)).toBe(true);
+    expect(traffic.agents.filter(a => a.kind === 'police').every(a => a.width === CYBER_VEHICLES[a.model!].width && a.length === CYBER_VEHICLES[a.model!].length)).toBe(true);
   });
   it('leaves the side windows and windscreen open behind the glazing',()=>{
     const material=new THREE.MeshBasicMaterial({side:THREE.DoubleSide}),roof=new THREE.Mesh(policeRoof(),material),side=new THREE.Mesh(policeCabinSide(1),material);

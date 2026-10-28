@@ -1,0 +1,35 @@
+import { test,expect } from '@playwright/test';
+import { startDrive } from './helpers';
+import { patchLuminance } from '../helpers/png-luminance';
+
+test('modeled city, warm fixtures and moving aerial lanes remain functional from chase view',async({page})=>{
+  test.setTimeout(300000);
+  const errors:string[]=[];
+  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  await page.setViewportSize({width:960,height:540});
+  await page.addInitScript(()=>localStorage.setItem('chillwave-drive:settings:v1',JSON.stringify({quality:'high',density:'low',musicEnabled:false})));
+  await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/?qa&seed=SUNSET');await startDrive(page);await page.clock.runFor(51);
+  await expect(page.locator('.speed-ring small')).toHaveText('MPH');
+  const state=await page.evaluate(()=>window.__drive.inspect());
+  console.log('city inspection',JSON.stringify({catalog:state.catalog,visibleAir:state.aerialTraffic.visible,lights:state.cityLighting,errors}));
+  for(let i=0;i<8;i++)await page.clock.fastForward(100);
+  await page.screenshot({path:'test-results/city-overhaul-chase.png'});
+  expect(state.catalog.available).toBe(100);expect(state.catalog.activeAssets.length).toBeGreaterThan(40);
+  expect(state.catalog.activeAssets).toContain(11);expect(state.catalog.activeAssets).toContain(51);
+  expect(state.catalog.nearGroups).toBeGreaterThan(0);expect(state.catalog.nearGroups).toBeLessThanOrEqual(state.catalog.midGroups);
+  expect(state.aerialTraffic.visible).toBeGreaterThanOrEqual(2);expect(state.aerialTraffic.count).toBe(15);
+  expect(state.cityLighting.physicalLights).toBe(6);expect(state.cityLighting.activeLights).toBeGreaterThanOrEqual(3);
+  await page.addStyleTag({content:'#hud,.header,#toast,.screen-shade{visibility:hidden!important}'});
+  const view=await page.locator('#world').screenshot({path:'test-results/city-overhaul-world.png'});
+  expect(patchLuminance(view,360,335,240,170)).toBeGreaterThan(.025);
+  await page.evaluate(()=>window.__drive.setCityNeon(false));await page.clock.runFor(17);
+  await page.screenshot({path:'test-results/city-overhaul-structure.png'});
+  await page.evaluate(()=>window.__drive.setCityNeon(true));
+  await page.keyboard.down('w');await page.evaluate(()=>window.__drive.advance(4));await page.keyboard.up('w');await page.clock.runFor(34);
+  const driven=await page.evaluate(()=>window.__drive.inspect());
+  expect(driven.state).toBe('playing');expect(driven.s).toBeGreaterThan(25);expect(driven.damage).toBe(0);
+  expect(driven.resolution).toBe(state.resolution);expect(driven.aerialTraffic.poses[0].s).not.toBe(state.aerialTraffic.poses[0].s);
+  await page.screenshot({path:'test-results/city-overhaul-driving.png'});
+  await page.keyboard.press('c');await page.clock.runFor(17);await page.screenshot({path:'test-results/city-overhaul-cockpit.png'});
+  expect(errors).toEqual([]);
+});

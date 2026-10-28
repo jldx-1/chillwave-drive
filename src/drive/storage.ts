@@ -1,18 +1,21 @@
 import type { Density, Quality, View } from './config';
-import type { MusicStyle } from '../core/types';
-export interface Preferences { view: View; quality: Quality; density: Density; sensitivity: number; musicVolume: number; effectsVolume: number; musicStyle: MusicStyle; musicEnabled: boolean; reducedMotion: boolean }
-export const preferences: Preferences = { view: 'chase', quality: 'high', density: 'normal', sensitivity: 1, musicVolume: .36, effectsVolume: .5, musicStyle: 'chillwave', musicEnabled: true, reducedMotion: false };
+import { RADIO_VIDEO_URL,youtubeVideoId,youtubeVideoURL } from './youtube-source';
+export interface Preferences { view: View; quality: Quality; density: Density; sensitivity: number; musicVolume: number; effectsVolume: number; musicVideoUrl:string;musicEnabled: boolean; reducedMotion: boolean }
+export const preferences: Preferences = { view: 'chase', quality: 'medium', density: 'normal', sensitivity: 1, musicVolume: .36, effectsVolume: .5, musicVideoUrl:RADIO_VIDEO_URL,musicEnabled: true, reducedMotion: false };
 export interface Result { distance: number; topSpeed: number; time: number; nearMisses: number; level: number; detours: number; score?:number; hits?:number }
 export class Records {
   settings = { ...preferences };
   best = 0; runs = 0; bestScore=0;
   available = true;
-  constructor(private storage?: Pick<Storage, 'getItem' | 'setItem'>) {
+  constructor(private storage?: Pick<Storage, 'getItem' | 'setItem'>, mobile = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) {
+    if (mobile) { this.settings.quality = 'low'; this.settings.density = 'low'; }
     try {
       if (!this.storage) this.storage = window.localStorage;
       const storage = this.storage;
       const saved = JSON.parse(storage.getItem('chillwave-drive:settings:v1') || '{}');
-      for (const [key, allowed] of Object.entries({ view: ['chase', 'cockpit'], quality: ['low', 'medium', 'high', 'ultra'], density: ['low', 'normal', 'high', 'dense'], musicStyle: ['chillwave', 'vaporwave', 'mixed'] })) {
+      const video=typeof saved.musicVideoUrl==='string'?youtubeVideoId(saved.musicVideoUrl):undefined;
+      if(video)this.settings.musicVideoUrl=youtubeVideoURL(video);
+      for (const [key, allowed] of Object.entries({ view: ['chase', 'cockpit'], quality: ['low', 'medium', 'high', 'ultra'], density: ['low', 'normal', 'high', 'dense'] })) {
         if (allowed.includes(saved[key])) Object.assign(this.settings, { [key]: saved[key] });
       }
       for (const key of ['musicVolume', 'effectsVolume', 'sensitivity'] as const) {

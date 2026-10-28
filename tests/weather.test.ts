@@ -58,3 +58,16 @@ describe('windshield water and physical blades', () => {
     const snapshot = JSON.stringify(water.drops); water.update(10, 60, [blade], false, true); expect(JSON.stringify(water.drops)).toBe(snapshot);
   });
 });
+
+it('keeps road splashes deterministic after moving between cells and returning', async () => {
+  const { RainSplashes }=await import('../src/drive/rain-splashes');
+  const splash=new RainSplashes();
+  const snapshot=()=>({count:splash.mesh.count,matrices:Array.from(splash.mesh.instanceMatrix.array.slice(0,splash.mesh.count*16)),ages:Array.from(splash.mesh.geometry.getAttribute('splashAge').array.slice(0,splash.mesh.count))});
+  splash.update(4.25,780,0,false);const before=snapshot();expect(before.count).toBeGreaterThan(0);
+  expect(splash.mesh.instanceMatrix.updateRanges).toEqual([{start:0,count:before.count*16}]);
+  expect((splash.mesh.geometry.getAttribute('splashAge') as import('three').BufferAttribute).updateRanges).toEqual([{start:0,count:before.count}]);
+  splash.update(5,930,0,false);splash.update(4.25,780,0,false);expect(snapshot()).toEqual(before);
+  splash.update(4.25,780,0,true);expect(splash.mesh.count).toBe(0);
+  splash.update(4.25,780,0,false);expect(snapshot()).toEqual(before);
+  splash.mesh.geometry.dispose();(splash.mesh.material as import('three').Material).dispose();
+});

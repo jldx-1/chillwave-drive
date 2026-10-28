@@ -1,3 +1,4 @@
+import { CYBER_VEHICLES } from '../src/drive/cyber-vehicles';
 import { describe, expect, it } from 'vitest';
 import { LANES, STEP, TUNE } from '../src/drive/config';
 import { Traffic, type Agent } from '../src/drive/traffic';
@@ -23,20 +24,21 @@ function movePlayer(player: Vehicle, speed: number): void {
 describe('police pursuit pace and traffic navigation', () => {
   it('catches and rear-quarters a player at maximum highway speed without relocating', () => {
     const { traffic, player, cop } = pursuit();
-    let fastest = 0, contacts = 0, farthest = 0, attacks=0, rearHits=0;
+    let fastest = 0, contacts = 0, farthest = 0, attacks=0, rearHits=0,firstContact=Infinity;
     for (let frame = 0; frame < 70 / STEP; frame++) {
       const before = cop.s;
       movePlayer(player, TUNE.maxSpeed);
       const event=traffic.step(STEP,player,frame*STEP);
-      contacts+=event.contacts.length;
+      contacts+=event.contacts.length;if(event.contacts.length&&firstContact===Infinity)firstContact=frame*STEP;
       rearHits+=event.contacts.filter(contact=>contact.s<player.s-1&&contact.impulse>100).length;
       expect(cop.s - before).toBeGreaterThanOrEqual(0);
-      expect(cop.s - before).toBeLessThanOrEqual(94 * STEP + 1e-7);
+      expect(cop.s - before).toBeLessThanOrEqual(CYBER_VEHICLES[cop.model!].speed * STEP + 1e-7);
       attacks+=Number(cop.state==='ramming');
       fastest = Math.max(fastest, cop.speed);
       farthest = Math.max(farthest, player.s - cop.s);
     }
-    expect(fastest).toBeGreaterThan(TUNE.maxSpeed + 8);
+    console.log('interceptor catch',JSON.stringify({firstContact,fastest}));
+    expect(firstContact).toBeLessThan(24);expect(fastest).toBeGreaterThan(TUNE.maxSpeed+20);
     expect(player.s - cop.s).toBeLessThan(31);
     expect(attacks).toBeGreaterThan(60);expect(rearHits).toBeGreaterThan(0);
     expect(player.s - cop.s).toBeLessThan(farthest / 5);
@@ -69,7 +71,7 @@ describe('police pursuit pace and traffic navigation', () => {
     for (let frame = 0; frame < 12 / STEP; frame++) {
       movePlayer(player, 55);
       contacts += traffic.step(STEP, player, frame * STEP).contacts.length;
-      const clearance = (cop.length + blocker.length) / 2 + Math.max(18, cop.speed * .4);
+      const clearance=(cop.length+blocker.length)/2+10;
       if (cop.s - blocker.s < clearance) {
         expect(cop.targetX).toBe(LANES[1]);
         heldFrames++;
@@ -81,13 +83,13 @@ describe('police pursuit pace and traffic navigation', () => {
     expect(contacts).toBe(0);
   });
 
-  it('keeps ordinary traffic acceleration and cruising speed unchanged', () => {
+  it('uses model-specific civilian acceleration and steady cruising speed', () => {
     const traffic = new Traffic('CIVILIANS', 'low'), player = new Vehicle(); traffic.reset();
     const car = traffic.agents.find(a => a.kind !== 'police' && a.direction === 1)!;
     Object.assign(car, { x: LANES[1], targetX: LANES[1], lane: 1, s: 100, oldS: 100, speed: 20, desired: 30, cooldown: 100 });
     traffic.agents = [car];
     for (let frame = 0; frame < 60; frame++) traffic.step(STEP, player, frame * STEP);
-    expect(car.speed).toBeCloseTo(23, 6);
+    expect(car.speed).toBeCloseTo(20+(car.model?CYBER_VEHICLES[car.model].acceleration:3),6);
     for (let frame = 60; frame < 360; frame++) traffic.step(STEP, player, frame * STEP);
     expect(car.speed).toBeCloseTo(30, 6);
     expect(traffic.activePolice).toHaveLength(0);

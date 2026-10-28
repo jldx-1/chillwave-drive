@@ -1,43 +1,19 @@
-# Chillwave Drive — Sunset Sessions
+# YouTube radio
 
-Two original arrangements ship locally: **Sunset Circuit** (Chillwave, the default) and **Afterimage Avenue** (Vaporwave). Mixed alternates them each eight-bar cycle. The compositions use warm chorus pads, jazzy FM electric piano, smooth bass, a mellow reed lead, swung percussion and delayed upper piano answers. Vaporwave adds whole-stem cassette wow/flutter, 2.8 kHz filtering and saturation.
+The driving game uses the official YouTube IFrame Player API to play [the supplied video](https://www.youtube.com/watch?v=wOMwO5T3yT4) (`wOMwO5T3yT4`). It does not extract audio, download the stream, or route YouTube audio through the sound-effects mixer.
 
-## Adaptive arrangement
+A compact top-right banner keeps a small thumbnail visible alongside animated playing-state level bars and play/pause. Clicking the thumbnail opens the full video controls; closing that view keeps the music running. The expanded player is at least 200 × 200 px. Blocked playback opens the native controls until playback starts. The YouTube link remains available in the banner status. The playing indicator follows actual provider events; connecting, buffering, blocked playback, errors and the end of a video have separate states. The game does not assume the selected video is permanently live.
 
-All stems share 72 BPM, 32 beats, 24 kHz mono PCM and exactly 640,000 samples (26.6666667 s). Speed never changes playback rate. Intensity combines cruising speed, pursuit level and nearby police pressure, then is clamped to 0–100.
+Start Drive or Play requests music after a user gesture. Browsers may require pressing Play again or using the native video controls. Playback needs an internet connection and permission from the video's uploader to embed it. Failed loading provides a retry and a link to YouTube; it never prevents driving. The embed includes the host origin, inline playback and a referrer policy that sends the origin.
 
-| Intensity | Layers |
-| --- | --- |
-| 0–<25 | Electric piano, warm pads, quiet kick and tape texture |
-| 25–<50 | Bass, backbeat and swung shaker |
-| 50–<75 | Mellow reed melody, echo and kick accents |
-| 75–100 | Upper piano answers, chord wash, claps and drum fills |
+The banner, header music button and M shortcut control playback. Music volume and sound-effect volume remain independent and persist locally. Settings includes a saved YouTube video-link field; watch, short, embed and livestream links are normalized to a validated video ID. Changing the source updates the same mini-player. Music continues through game pause, settings, results and menus. It pauses when the document is hidden. There is no music-style selector or pursuit-adaptive soundtrack in the driving game. Existing saved style preferences are ignored.
 
-Layer rise/release time constants are 0.85 / 1.8 s; style crossfades use 1.5 s. All loops share an AudioContext clock and start/offset, preserving phrase and beat through intensity changes. Wrapped note/echo tails avoid encoded silence at the loop boundary. Runtime convolution adds a small shared stereo room.
+Engine, tire, rain, impact and positional siren audio still use Web Audio and follow the driving game's pause/resume lifecycle. The original synthesized arrangements, generator and licenses remain archived in `public/audio` and `src/effects`; the driving entry point no longer imports them.
 
-Music is lazy-loaded and decoded after Start/Resume gestures. No AudioContext or soundtrack request occurs on page load. Pause fades the master output, then suspends the clock. Resume continues the phrase without duplicate sources. M toggles music independently of vehicle effects. Disabling music on a fresh page avoids fetching it. Saved preferences use the new `chillwave-drive:settings:v1` namespace.
+Browser tests substitute a deterministic YouTube API/provider fixture to check integration, playback states, retries, volume, persistence, and zero soundtrack WAV requests. These do not prove availability of the remote video in every region or browser. Test the actual video on the deployed HTTPS origin before publishing.
 
-## Driving audio
+API reference: https://developers.google.com/youtube/iframe_api_reference
 
-`src/drive/audio.ts` adds original synthesized idle/load/RPM harmonics, rain, wet tire hiss, slip noise, impacts, spatial passing traffic and police sirens. Each siren uses its actual car's position with HRTF panning and inverse distance attenuation. A low-pass cabin filter and voice balance distinguish cockpit and exterior views. Driving sounds are placeholders, not high-quality recorded engines. No recordings were borrowed from commercial games.
+The earlier requested video (`GBUCmMxmup0`) returned provider error 150 in the live browser check. The default was replaced with the user’s new selection (`wOMwO5T3yT4`), which reached the real YouTube player’s PLAYING state in the local browser check. For restricted videos the player reports the issue and offers the YouTube link; the saved video-link setting can select another source.
 
-One arrangement is about 4.9 MiB; both total about 9.8 MiB. Eight decoded mono loops at 48 kHz require about 39 MiB. Music sources remain bounded at eight. Traffic voices are bounded at six; police voices at four. A shared compressor protects combined output. Audio failure leaves driving usable.
-
-## Rights and regeneration
-
-All music compositions, recordings and the generator were originally synthesized for this project. There are no third-party samples or melodies. The [MIT audio license](public/audio/LICENSE.txt) includes the original contributor notice, which is retained after the game rename. Font and Three.js licenses remain separate.
-
-```bash
-# Optional regeneration; requires Python 3 and NumPy.
-python3 tools/generate_soundtrack.py
-npm test
-npm run build
-```
-
-Rebuild all stems together if tempo, frame count or arrangement length changes. The generator writes soundtrack metadata to `src/audio/manifest.json`, which Vite bundles with the music code. WAV files remain in `public/audio` and are copied to `dist/audio`; runtime audio URLs use Vite's relative base.
-
-## Verification
-
-Unit tests check exact mix boundaries, gain automation, synchronized sources, phase-aligned style changes, bounded sources, load retry, suspended-clock behavior, equal PCM durations, safe levels and loop boundary continuity. Browser checks measure real output with an analyser and render an actual loop boundary with OfflineAudioContext. They exercise pause/resume, independent volumes, both styles, Mixed, disable/mute, persistence and repository-subdirectory loading.
-
-Manual listening is still required to judge engine timbre, music taste, siren balance and comfort. Test on headphones/speakers and real Chrome, Firefox and Safari devices before release. Verify the actual GitHub Pages URL after publishing; local production tests do not establish hosted deployment success.
+Police sirens use original layered scanner tones: a rounded carrier, fifth harmony, restrained frequency modulation and a faster close-pursuit alert. Each unit retains a spatial panner and bounded reusable nodes. The siren browser check renders six seconds of actual Web Audio to `test-results/cyber-police-siren.wav` and checks signal levels and continuity.

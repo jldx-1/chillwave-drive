@@ -1,3 +1,4 @@
+import {VEHICLE_LAMPS} from '../src/drive/lamp-levels';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -49,7 +50,7 @@ describe('independent bundled vehicle assets',()=>{
   expect(first.wheels[0].rotation.y).toBe(.3);expect(first.wheels[1].rotation.y).toBe(0);
   expect(first.spins[0].rotation.x).not.toBe(0);expect(second.spins[0].rotation.x).toBeCloseTo(0);
   expect(first.lamps.red[0]).not.toBe(second.lamps.red[0]);expect(first.lamps.red[0].emissiveIntensity).toBe(5);expect(second.lamps.red[0].emissiveIntensity).toBe(0);
-  expect(first.lamps.brake[0].emissiveIntensity).toBe(3.5);
+  expect(first.lamps.brake[0].emissiveIntensity).toBe(VEHICLE_LAMPS.brake);
   const mesh=(g:THREE.Group)=>{const a:THREE.Mesh[]=[];g.traverse(o=>{if(o instanceof THREE.Mesh)a.push(o);});return a;};
   const a=mesh(first.group),b=mesh(second.group);expect(a[0].geometry).toBe(b[0].geometry);
   let disposed=false;b[0].geometry.addEventListener('dispose',()=>disposed=true);disposeFleetRig(first);expect(disposed).toBe(false);disposeFleetRig(second);

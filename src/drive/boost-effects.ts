@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-/** Two short, crossed flame ribbons follow the actual rear wheel mounts. No per-boost allocation. */
+/** Two short, crossed flame ribbons follow the modeled exhaust ports. No per-boost allocation. */
 export class BoostEffects {
   readonly group=new THREE.Group();
   private geometry=new THREE.BufferGeometry();
@@ -11,19 +11,19 @@ export class BoostEffects {
   });
   constructor(){
     this.geometry.setAttribute('position',new THREE.Float32BufferAttribute([
-      -.25,0,0,.25,0,0,-.08,.04,1.8,.08,.04,1.8,
-      0,-.04,0,0,.26,0,0,.05,1.8,0,.1,1.8,
+      -.25,0,0,.25,0,0,-.08,.04,2.5,.08,.04,2.5,
+      0,-.04,0,0,.26,0,0,.05,2.5,0,.1,2.5,
     ],3));
     this.geometry.setAttribute('uv',new THREE.Float32BufferAttribute([0,0,1,0,0,1,1,1,0,0,1,0,0,1,1,1],2));
     this.geometry.setIndex([0,1,2,2,1,3,4,5,6,6,5,7]);
-    for(let i=0;i<2;i++){const mesh=new THREE.Mesh(this.geometry,this.material);mesh.name='rear-wheel-boost-'+i;this.group.add(mesh);}
+    for(let i=0;i<2;i++){const mesh=new THREE.Mesh(this.geometry,this.material);mesh.name='exhaust-flame-'+i;mesh.scale.set(.3,.6,1);this.group.add(mesh);}
     this.geometry.computeVertexNormals();
     this.group.userData.colorOnly=true;
     this.group.visible=false;
   }
   setMounts(mounts:readonly THREE.Vector3[]):void{
     this.group.children.forEach((mesh,i)=>{
-      const mount=mounts[i];if(mount)mesh.position.set(mount.x,.11,mount.z+.5);
+      const mount=mounts[i];if(mount)mesh.position.copy(mount);
     });
   }
   update(pulse:number,time:number,reduced=false):void{
@@ -31,7 +31,7 @@ export class BoostEffects {
     this.material.uniforms.strength.value=strength*(reduced?.55:1);
     this.material.uniforms.time.value=time;
     this.group.visible=strength>.005;
-    this.group.scale.z=(.6+.4*strength)*(reduced?.65:1);
+    for(const plume of this.group.children)plume.scale.z=(.6+.4*strength)*(reduced?.65:1);
   }
   get diagnostics(){return {visible:this.group.visible,strength:this.material.uniforms.strength.value,plumes:this.group.children.length};}
   dispose():void{this.geometry.dispose();this.material.dispose();this.group.clear();}

@@ -59,6 +59,12 @@ for (const path of ['.nojekyll', 'favicon.svg', 'models/porsche-911-gt3/model.gl
 const vehicleAudit = JSON.parse(await readFile(await fileAt('assets/vehicles/geometry-audit.json'), 'utf8'));
 for (const spec of Object.values(vehicleAudit.files)) await fileAt(spec.path);
 for (const path of ['assets/vehicles/provenance.json','assets/vehicles/licenses/CC-BY-4.0.txt','assets/vehicles/licenses/Original-MIT.txt']) await fileAt(path);
+const studioHTML = await readFile(await fileAt('vehicles.html'), 'utf8');
+const studioURL = new URL('vehicles.html', pageURL);
+for (const match of studioHTML.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/g)) await asset(match[1], studioURL);
+const cyberManifest = JSON.parse(await readFile(await fileAt('models/cyber/manifest.json'), 'utf8'));
+assert(cyberManifest.models.length === 46, 'Reference fleet must include fifteen models, three LODs each, plus the cockpit rig.');
+for (const model of cyberManifest.models) await fileAt(`models/cyber/${model.file}`);
 for (const style of ['chillwave','vaporwave']) for (const stem of ['atmosphere','bass','melody','lift']) await fileAt(`audio/${style}-${stem}.wav`);
 for (const path of ['CREDITS.md','models/porsche-911-gt3/LICENSE.md','models/car-concept/LICENSE.md']) {
   const text = await readFile(await fileAt(path), 'utf8');
