@@ -11,8 +11,8 @@ describe('continuous deterministic metropolitan layout', () => {
     expect(cityChunk('CITY', 12)).not.toEqual(cityChunk('OTHER', 12));
     const chunks = Array.from({ length: 90 }, (_, id) => cityChunk('CITY', id));
     expect(new Set(chunks.flatMap(c => c.parcels.map(p => p.style)))).toEqual(new Set(['curtain', 'stepped', 'masonry', 'residential', 'rounded', 'garage', 'warehouse', 'fuel']));
-    // Native-scale podiums occupy one or two plots per 120 m lane, rather than shrinking to three identical lots.
-    expect(chunks.every(c => c.parcels.length >= 6 && c.parcels.length <= 12)).toBe(true);
+    // Four compact rows per side fill each block around its actual road reserves.
+    expect(chunks.every(c => c.parcels.length >= 16 && c.parcels.length <= 24)).toBe(true);
     expect(new Set(chunks.flatMap(c=>c.parcels.flatMap(p=>p.assetId?[p.assetId]:[]))).size).toBe(100);
   });
   it('reserves the full ramp corridor and bridge cross streets before placing buildings', () => {
@@ -26,11 +26,26 @@ describe('continuous deterministic metropolitan layout', () => {
       }
     }
   });
+  it('packs frontage closely and fills both sides of the neighborhood street',()=>{
+    const plain=cityChunk('DENSE',0);
+    for(const side of [-1,1]) {
+      const frontage=plain.parcels.filter(p=>p.side===side&&p.row===0);
+      expect(frontage).toHaveLength(3);
+      expect(frontage.every(p=>Math.abs(p.x)-p.width/2===23)).toBe(true);
+      for(let i=1;i<frontage.length;i++)expect(frontage[i].s-frontage[i-1].s-(frontage[i].depth+frontage[i-1].depth)/2).toBe(4);
+    }
+    for(const base of [0,1800,3600]) {
+      const s=base+1250,center=road.branchCenter(s)!;
+      const plots=cityChunk('DENSE',Math.floor(s/120)).parcels.filter(p=>p.side===1);
+      expect(plots.some(p=>p.x+p.width/2<center-7)).toBe(true);
+      expect(plots.some(p=>p.x-p.width/2>center+7)).toBe(true);
+    }
+  });
   it('supports terrain under every reachable route and agrees on physical overpasses', () => {
     for (let s = 0; s < 12000; s += 7) for (const [a, b] of road.corridorAt(s)) expect(groundCovers(a) && groundCovers(b)).toBe(true);
     expect(GROUND_HALF_WIDTH).toBeGreaterThan(600);
     expect(cityChunk('BRIDGE', 6).overpasses).toEqual(overpassesAt(780).filter(p => p.id === 6));
-    expect(cityChunk('BRIDGE', 6).parcels).toHaveLength(12);
+    expect(cityChunk('BRIDGE', 6).parcels).toHaveLength(16);
   });
 });
 

@@ -1,12 +1,14 @@
 import { Random, hashSeed } from '../core/random';
-import { road, overpassesAt } from './road';
+import { road, overpassesAt, districtPassagesAt } from './road';
 import { BUILDING_CATALOG, buildingAsset, type BuildingAsset } from './building-catalog';
 
 export const CITY_CHUNK = 120;
 export const CITY_STREAM_BEHIND=6;
 export const CITY_STREAM_AHEAD=7;
 export const GROUND_HALF_WIDTH = 740;
-export const CITY_ROW_SPACING = 110;
+export const CITY_ROW_SPACING = 56;
+export const CITY_ROWS = 4;
+export const CITY_BUILDING_GAP = 4;
 export type Architecture = 'curtain' | 'stepped' | 'masonry' | 'residential' | 'rounded' | 'garage' | 'warehouse' | 'fuel';
 export interface CityParcel {
   id: string; x: number; s: number; width: number; depth: number; height: number;
@@ -35,53 +37,53 @@ function family(a:BuildingAsset):Architecture {
   if([3,13,20,23,27,29,35,49,58,76,84,91,97].includes(a.id))return 'stepped';
   return a.district===3?'masonry':'curtain';
 }
-/** Reserve native-scale plots and cross streets before choosing buildings. No footprint is squeezed to fit. */
+/** Dense frontage plots follow the actual street reserve; the catalog supplies identity and height. */
 export function cityChunk(seed:string,id:number):CityChunkSpec {
   const start=id*CITY_CHUNK,overpasses=overpassesAt(start+60).filter(p=>Math.floor(p.s/CITY_CHUNK)===id);
   const front:[number,number]=[23,23];
-  for(let ds=0;ds<=CITY_CHUNK;ds+=4)for(const [a,b]of road.corridorAt(start+ds)) {
-    front[0]=Math.max(front[0],-a+3.5);front[1]=Math.max(front[1],b+3.5);
-  }
   const district=road.routeAt(start+60)?.district??(Math.floor(id/8)%3===2?'industrial':'commercial');
-  const intervals:[number,number][]=[];let cursor=start+7;
+  const intervals:[number,number][]=[];let cursor=start+6;
   for(const bridge of overpasses) {
     intervals.push([cursor,bridge.s-bridge.length/2-5]);cursor=bridge.s+bridge.length/2+5;
   }
-  intervals.push([cursor,start+CITY_CHUNK-7]);
+  intervals.push([cursor,start+CITY_CHUNK-6]);
   const parcels:CityParcel[]=[];
-  for(const side of [-1,1]as const)for(let row=0;row<3;row++) {
-    const lane=(side<0?0:3)+row;
-    // A composed gateway establishes the portrait, signature sign and tall silhouettes on the first drive.
-    const gateway=[[11,4,88],[51,3,81]];
-    const first=id===0?buildingAsset(gateway[side<0?0:1][row]):catalogAt(seed,id*6+lane);
-    const second=catalogAt(seed,id*6+lane+43);
+  const passages=districtPassagesAt(start+60);
+  for(const side of [-1,1] as const)for(let row=0;row<CITY_ROWS;row++) {
     let slot=0;
-    for(const [lo,hi]of intervals) {
-      const length=hi-lo;
-      if(length<25)continue;
-      const fitting=BUILDING_CATALOG.filter(a=>a.plotDepth<=length);
-      let a=first.plotDepth<=length?first:fitting[hashSeed(`${seed}:${id}:${lane}:infill:${slot}`)%fitting.length];
-      const both=!(id===0&&row===0)&&!overpasses.length&&a.plotDepth+second.plotDepth+10<=length&&a.id!==second.id;
-      const choices=both?[a,second]:[a];
-      for(const [i,asset]of choices.entries()) {
-        a=asset;const s=both?(i===0?lo+a.plotDepth/2:hi-a.plotDepth/2):(lo+hi)/2;
-        const width=a.plotWidth,depth=a.plotDepth,x=side*(front[side<0?0:1]+width/2+row*CITY_ROW_SPACING);
+    for(const [lo,hi] of intervals) {
+      let at=lo;
+      while(hi-at>=26) {
+        const lane=(side<0?0:CITY_ROWS)+row;
+        const gateway=[[11,4,88],[51,3,81]];
+        const a=id===0&&slot===0&&row<3?buildingAsset(gateway[side<0?0:1][row]):catalogAt(seed,id*CITY_ROWS*6+lane*3+slot);
         const parcelSeed=hashSeed(`${seed}:parcel:${id}:${side}:${row}:${slot}`);
-        parcels.push({id:`${id}:${side}:${row}:${slot++}`,assetId:a.id,x,s,width,depth,height:a.height,side,row,style:family(a),seed:parcelSeed,floors:a.floors,sign:parcelSeed%16});
+        const width=28+parcelSeed%8*2,depth=Math.min(26+(parcelSeed>>>4)%5*2,hi-at);
+        const center=at+depth/2,blocked:[number,number][]=[];
+        for(let s=center-depth/2;s<=center+depth/2+.01;s+=2)for(const [a,b] of road.corridorAt(s))
+          blocked.push(side===1?[a-3.5,b+3.5]:[-b-3.5,-a+3.5]);
+        for(const q of parcels)if(q.side===side&&Math.abs(q.s-center)<(q.depth+depth)/2+CITY_BUILDING_GAP)
+          blocked.push([Math.abs(q.x)-q.width/2-CITY_BUILDING_GAP,Math.abs(q.x)+q.width/2+CITY_BUILDING_GAP]);
+        for(const passage of passages)if(Math.abs(passage.s-center)<(passage.length+depth)/2+1.5)
+          blocked.push(side===1?[passage.x-passage.width/2-1.5,passage.x+passage.width/2+1.5]:[-passage.x-passage.width/2-1.5,-passage.x+passage.width/2+1.5]);
+        blocked.sort((a,b)=>a[0]-b[0]);
+        let edge=front[side<0?0:1];
+        for(const [a,b] of blocked) {if(edge+width<=a)break;if(edge<b&&edge+width>a)edge=b;}
+        parcels.push({id:`${id}:${side}:${row}:${slot}`,assetId:a.id,x:side*(edge+width/2),s:center,width,depth,height:a.height,side,row,style:family(a),seed:parcelSeed,floors:a.floors,sign:parcelSeed%16});
+        slot++;at+=depth+CITY_BUILDING_GAP;
       }
     }
   }
-  // Small service forecourts remain part of the street mix alongside the catalog buildings.
   if(id%7===3&&!overpasses.length) {
-    const row=0,side=1 as const,p=parcels.find(p=>p.row===row&&p.side===side)!;
-    Object.assign(p,{assetId:undefined,style:'fuel',width:26,depth:29,height:6,floors:1,x:front[1]+13});
+    const p=parcels.find(p=>p.row===0&&p.side===1)!;
+    if(p)Object.assign(p,{assetId:undefined,style:'fuel',height:6,floors:1});
   }
   return {id,start,front,parcels,district,overpasses};
 }
 export function parcelRoadClearance(p: CityParcel): number {
   let clearance = Infinity;
   for (let s = p.s - p.depth / 2; s <= p.s + p.depth / 2 + .01; s += 2) for (const [a, b] of road.corridorAt(s)) {
-    clearance = Math.min(clearance, p.side === 1 ? p.x - p.width / 2 - b : a - p.x - p.width / 2);
+    clearance = Math.min(clearance, Math.max(a-(p.x+p.width/2),p.x-p.width/2-b));
   }
   return clearance;
 }

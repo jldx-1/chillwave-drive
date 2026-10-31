@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { PowerUp } from './powerups';
-import type { Vehicle } from './vehicle';
+import type { Vehicle, Pose } from './vehicle';
 import { sceneZ } from './road';
 
 /** Shared geometry and a bounded pool keep streamed collectibles inexpensive. */
@@ -15,8 +15,9 @@ export class PowerUpVisuals {
   };
   private shieldMaterial = new THREE.MeshBasicMaterial({ color: '#4be8ff', transparent: true, opacity: .13, wireframe: true, depthWrite: false });
   private bubble = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 3), this.shieldMaterial);
+  get shieldPose(){return {visible:this.bubble.visible,x:this.bubble.position.x,z:this.bubble.position.z,y:this.bubble.position.y,yaw:this.bubble.rotation.y,opacity:this.shieldMaterial.opacity};}
   constructor() { this.group.add(this.bubble); this.bubble.visible = false; }
-  update(items: PowerUp[], vehicle: Vehicle, origin: number, reduced: boolean): void {
+  update(items: PowerUp[], vehicle: Vehicle, origin: number, reduced: boolean, pose:Pose=vehicle.pose(1)): void {
     const live = new Set(items.map(item => item.id));
     for (const [id, group] of this.items) if (!live.has(id)) { this.group.remove(group); this.items.delete(id); }
     for (const item of items) {
@@ -32,8 +33,8 @@ export class PowerUpVisuals {
       group.rotation.y = reduced ? 0 : vehicle.simulationTime * 1.4;
     }
     this.bubble.visible = vehicle.shield > 0 && !vehicle.exploded;
-    this.bubble.position.set(vehicle.x, .9+vehicle.jumpHeight, sceneZ(vehicle.s, origin));
-    this.bubble.rotation.y = -vehicle.yaw; this.bubble.scale.set(1.45, 1.3, 2.8);
-    this.shieldMaterial.opacity = vehicle.shield < 2 && !reduced ? .08 + .09 * (1 + Math.sin(vehicle.simulationTime * 16)) / 2 : .16;
+    this.bubble.position.set(pose.x, .9+(pose.height??0), sceneZ(pose.s, origin));
+    this.bubble.rotation.y = -pose.yaw; this.bubble.scale.set(1.45, 1.3, 2.8);
+    this.shieldMaterial.opacity = .16*Math.min(1,vehicle.shield/.35);
   }
 }

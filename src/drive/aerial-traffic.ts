@@ -1,3 +1,4 @@
+import { ViewBatch } from './view-batch';
 import * as THREE from 'three';
 import { hashSeed, Random } from '../core/random';
 import { UrbanBatch } from './world-geometry';
@@ -13,7 +14,7 @@ export function aerialPose(seed:string,cell:number,kind:AerialKind,time:number,r
     y:[24.5,35,46][type]+(reduced?0:Math.sin(t*.7+phase)*.28),
     s:cell*240+[105,155,215][type]+t*speeds[type],yaw:type===1?Math.PI:0};
 }
-interface Fleet {kind:AerialKind; parts:THREE.InstancedMesh[];poses:{x:number;y:number;s:number}[]}
+interface Fleet {kind:AerialKind; parts:ViewBatch[];poses:{x:number;y:number;s:number}[]}
 /** Three readable silhouettes, instanced into a fixed pool along world-space flight lanes. */
 export class AerialTraffic {
   readonly group=new THREE.Group();
@@ -42,10 +43,10 @@ export class AerialTraffic {
         }
         b.box(m.cyan,0,-.1,0,.6,.1,1.2);
       }
-      const template=b.build(),parts:THREE.InstancedMesh[]=[];
+      const template=b.build(),parts:ViewBatch[]=[];
       for(const object of template.children) {
-        const mesh=object as THREE.Mesh,instance=new THREE.InstancedMesh(mesh.geometry,mesh.material,5);
-        instance.instanceMatrix.setUsage(THREE.DynamicDrawUsage);instance.frustumCulled=false;instance.castShadow=false;
+        const mesh=object as THREE.Mesh,instance=new ViewBatch(mesh.geometry,mesh.material as THREE.Material,5);
+        instance.frustumCulled=false;instance.castShadow=false;
         this.group.add(instance);parts.push(instance);
       }
       this.fleets.push({kind,parts,poses:[]});
@@ -54,13 +55,13 @@ export class AerialTraffic {
   update(seed:string,s:number,origin:number,time:number,reduced:boolean):void {
     for(let type=0;type<this.fleets.length;type++) {
       const fleet=this.fleets[type],cell=Math.floor((s-(reduced?0:time)*speeds[type])/240);fleet.poses.length=0;
-      let count=0;
+      let count=0; for(const part of fleet.parts)part.activeCount=0;
       for(let id=cell-1;id<=cell+3;id++) {
         const pose=aerialPose(seed,id,fleet.kind,time,reduced);fleet.poses.push(pose);
         this.transform.position.set(pose.x,pose.y,sceneZ(pose.s,origin));this.transform.rotation.set(0,pose.yaw,0);this.transform.scale.setScalar(type===0?1.45:type===1?1.25:1);this.transform.updateMatrix();
-        for(const part of fleet.parts) part.setMatrixAt(count,this.transform.matrix);count++;
+        for(const part of fleet.parts) part.place(this.transform.matrix);count++;
       }
-      for(const part of fleet.parts){part.count=count;part.instanceMatrix.needsUpdate=true;}
+      for(const part of fleet.parts){part.activeCount=count;}
     }
   }
   inspectView(camera:THREE.Camera,origin:number):void {
@@ -71,5 +72,5 @@ export class AerialTraffic {
     }
   }
   get diagnostics(){return {visible:this.visible,count:this.fleets.length*5,kinds:kinds,poses:this.fleets.flatMap(f=>f.poses.map(p=>({...p,kind:f.kind}))) };}
-  dispose():void {for(const fleet of this.fleets)for(const part of fleet.parts)part.geometry.dispose();}
+  dispose():void {for(const fleet of this.fleets)for(const part of fleet.parts)part.dispose();}
 }

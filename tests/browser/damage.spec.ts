@@ -56,7 +56,8 @@ test('steering into an amber pickup activates turbo and its flame ribbons', asyn
   // Feedback steering sends ordinary keyboard events through the real input handler.
   const powered = await page.evaluate(() => {
     let held = '';
-    for (let i = 0; i < 90; i++) {
+    // Allow enough driving time to reach the pickup at s=570 with the current acceleration.
+    for (let i = 0; i < 100; i++) {
       const state = window.__drive.inspect();
       if (state.turbo > 0 || state.state !== 'playing') break;
       const correction = (10.1 - state.x) * .7 - state.yaw * 15;

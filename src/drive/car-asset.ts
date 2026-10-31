@@ -1,3 +1,4 @@
+import { automotiveFinish } from './automotive-materials';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { cyberPlayerPrefab } from './cyber-prefabs';
@@ -200,10 +201,11 @@ export function rigCanonicalPlayer(source: THREE.Group, color: string): PlayerCa
           shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nvec2 cells=carSurface.xz*150.;vec2 bead=fract(cells)-.5;float water=smoothstep(.24,.06,length(bead))*step(.978,fract(sin(dot(floor(cells),vec2(12.9898,78.233)))*43758.5453));normal=normalize(normal+vec3(bead*water*.14,0.));roughnessFactor=mix(roughnessFactor,.08,water);');
         };
       }
-      if (role === 'window' || role==='glass' || /EXT_Glass_Windows/.test(m.name)) {m.color.set('#b3cedc');m.transparent=true;m.opacity=.13;m.depthWrite=false;m.side=THREE.DoubleSide;windows.push(m);}
+      if (role === 'window' || role==='glass' || /EXT_Glass_Windows/.test(m.name)) {m.color.set('#aec2d0');m.transparent=true;m.opacity=.18;m.depthWrite=false;m.side=THREE.DoubleSide;windows.push(m);}
       if (role === 'head') headlamps.push(m);
       if (role === 'brake') lamps.push(m);
       if(role==='reverse')reverseLamps.push(m);if(role==='turn')turnLamps.push(m);
+      delete m.userData.automotiveFinish; automotiveFinish(m,role);
       unique.push(m); cache.set(original, m); return m;
     };
     o.material = Array.isArray(o.material) ? o.material.map(material) : material(o.material);

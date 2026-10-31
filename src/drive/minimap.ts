@@ -4,8 +4,11 @@ import { road } from './road';
 import { medianIsOpen, medianGate } from './median';
 /** North-up navigation uses logical world coordinates, independent of origin rebasing. */
 export function drawNavigation(ctx: CanvasRenderingContext2D, player: Vehicle, traffic: Traffic, time: number): void {
-  const w = ctx.canvas.width, h = ctx.canvas.height, sx = 2.5, sy = .36;
-  const x = (v: number) => w * .51 + (v - player.x) * sx, y = (s: number) => h * .73 - (s - player.s) * sy;
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  const district=road.routeAt(player.s)??road.entryWindow(player.s),sx=district ? .72 : 2.5,sy=district ? .28 : .36;
+  const next=road.branchCenter(player.s+180)??player.x;
+  const centerX=player.x+(district?Math.max(-35,Math.min(35,(next-player.x)*.3)):0);
+  const x = (v: number) => w * .51 + (v - centerX) * sx, y = (s: number) => h * .73 - (s - player.s) * sy;
   ctx.clearRect(0, 0, w, h); ctx.fillStyle = '#08131db3'; ctx.fillRect(0, 0, w, h);
   for (const [a,b] of [[-16,-.6],[.6,16]]) { ctx.fillStyle = '#49617055';ctx.fillRect(x(a), 0, (b-a)*sx, h); }
   ctx.strokeStyle = '#a2b5bf55'; ctx.lineWidth = 1;

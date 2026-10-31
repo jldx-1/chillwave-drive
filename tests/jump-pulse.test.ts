@@ -29,21 +29,33 @@ describe('jump ramps', () => {
   });
 });
 
-describe('directional pulse', () => {
-  it('destroys the nearest target in the selected direction, recharges, and preserves traffic capacity', () => {
-    const traffic=new Traffic('PULSE');traffic.reset();const player=new Vehicle();
+describe('guided missiles', () => {
+  it('launches from the car and destroys traffic only after flight and impact', () => {
+    const traffic=new Traffic('MISSILES');traffic.reset();const player=new Vehicle();
     const [front,far,rear]=traffic.agents;
-    Object.assign(front,{x:6.5,s:25});Object.assign(far,{x:6.5,s:55});Object.assign(rear,{x:6.5,s:-15});
+    Object.assign(front,{x:6.5,oldX:6.5,s:35,oldS:35,speed:0,desired:0,direction:1,yaw:0,lane:1,targetX:6.5,kind:'sedan'});
+    Object.assign(far,{x:6.5,s:95,oldS:95,speed:0,desired:0,direction:1,yaw:0,lane:1,targetX:6.5});
+    Object.assign(rear,{x:6.5,s:-35,oldS:-35,speed:0,desired:0,direction:1,yaw:0,lane:1,targetX:6.5});
     traffic.agents=[front,far,rear];
-    expect(traffic.firePulse(player,1)).toEqual({status:'hit',target:front});
-    expect(traffic.agents).not.toContain(front);expect(traffic.agents).toHaveLength(3);
-    expect(traffic.firePulse(player,-1).status).toBe('recharging');
-    for(let i=0;i<301;i++)player.step(STEP,neutral());
-    expect(traffic.firePulse(player,-1)).toEqual({status:'hit',target:rear});
-    expect(traffic.agents).not.toContain(rear);expect(traffic.agents).toContain(far);
+    expect(traffic.fireMissile(player,1)).toEqual({status:'fired',target:front});
+    expect(traffic.agents).toContain(front);expect(traffic.missiles.active).toHaveLength(1);
+    expect(traffic.missiles.active[0].s).toBeGreaterThan(player.s+player.tuning.length/2);
+    expect(traffic.fireMissile(player,-1).status).toBe('recharging');
+    let explosions=0;
+    for(let i=0;i<150;i++){
+      player.step(STEP,neutral());
+      explosions+=traffic.step(STEP,player,player.simulationTime).explosions.filter(b=>b.missile).length;
+    }
+    expect(explosions).toBe(1);expect(traffic.agents).not.toContain(front);
+    expect(traffic.agents).toHaveLength(3);expect(traffic.agents).toContain(far);expect(traffic.missiles.active).toHaveLength(0);
+    for(let i=0;i<160;i++)player.step(STEP,neutral());
+    expect(traffic.fireMissile(player,-1).status).toBe('fired');
+    for(let i=0;i<150;i++){player.step(STEP,neutral());traffic.step(STEP,player,player.simulationTime);}
+    expect(traffic.agents).not.toContain(rear);expect(traffic.agents).toHaveLength(3);
   });
-  it('does not consume a charge with no target in range', () => {
+  it('does not consume a charge with no target in range and clears projectiles on reset', () => {
     const traffic=new Traffic('EMPTY'),player=new Vehicle();traffic.reset();traffic.agents=[];
-    expect(traffic.firePulse(player,1).status).toBe('empty');expect(player.pulseCooldown).toBe(0);
+    expect(traffic.fireMissile(player,1).status).toBe('empty');expect(player.pulseCooldown).toBe(0);
+    traffic.missiles.launch(player,123,1);traffic.reset();expect(traffic.missiles.active).toHaveLength(0);
   });
 });

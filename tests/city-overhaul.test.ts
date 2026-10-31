@@ -1,3 +1,4 @@
+import { road } from '../src/drive/road';
 import * as THREE from 'three';
 import { createHash } from 'node:crypto';
 import { describe,expect,it } from 'vitest';
@@ -49,14 +50,14 @@ describe('city architecture and public space',()=>{
     for(let i=0;i<p.count;i++)expect(p.getX(i)*n.getX(i)+(p.getY(i)-4)*n.getY(i)+p.getZ(i)*n.getZ(i)).toBeGreaterThan(0);
     mesh.geometry.dispose();material.dispose();
   });
-  it('avoids repeating neighboring tower families and uses the full configuration set',()=>{
+  it('avoids repeating neighboring catalog identities and uses the full configuration set',()=>{
     const names=new Set<string>();
     for(let id=0;id<20;id++) {
       const parcels=cityChunk('NEIGHBORS',id).parcels.filter(p=>families.includes(p.style as typeof families[number]));
       for(const p of parcels)names.add(towerPlan(p).name);
       for(const side of [-1,1])for(const row of [0,1,2]) {
         const line=parcels.filter(p=>p.side===side&&p.row===row).sort((a,b)=>a.s-b.s);
-        for(let i=1;i<line.length;i++) expect(towerPlan(line[i]).name).not.toBe(towerPlan(line[i-1]).name);
+        for(let i=1;i<line.length;i++) expect(line[i].assetId).not.toBe(line[i-1].assetId);
       }
     }
     expect(names.size).toBe(10);
@@ -81,6 +82,14 @@ describe('stable city illumination and aerial routes',()=>{
     const before=lights.diagnostics;expect(before.activeLights).toBeGreaterThanOrEqual(3);expect(before.physicalLights).toBe(6);
     lights.update('LIGHTS',1034.7,1000,0,'high');const after=lights.diagnostics;
     after.sources.forEach((source,i)=>{expect(source.key).toBe(before.sources[i].key);expect(source.position[2]-before.sources[i].position[2]).toBeCloseTo(1000,6);expect(source.intensity).toBeCloseTo(before.sources[i].intensity,8);});
+  });
+  it('keeps the fixed light pool beside the player inside a neighborhood route',()=>{
+    const lights=new CityLighting(),s=1250,x=road.branchCenter(s)!;
+    for(let i=0;i<120;i++)lights.update('DISTRICT',s,1000,1/60,'high',x);
+    expect(lights.diagnostics.physicalLights).toBe(6);
+    const street=lights.diagnostics.sources.filter(source=>source.key.startsWith('district:'));
+    expect(street.length).toBeGreaterThanOrEqual(2);
+    expect(street.every(source=>Math.abs(source.position[0]-x)<10)).toBe(true);
   });
   it('moves craft continuously along separate world-space flight layers and honors reduced motion',()=>{
     for(const kind of ['hovercar','transport','drone'] as const){const a=aerialPose('AIR',0,kind,10),b=aerialPose('AIR',0,kind,10+1/120);expect(Math.abs(a.s-b.s)).toBeLessThan(.06);expect(Math.abs(a.x-b.x)).toBeLessThan(.02);expect(a.y).toBeGreaterThan(24);expect(aerialPose('AIR',0,kind,10,true)).toEqual(aerialPose('AIR',0,kind,100,true));}

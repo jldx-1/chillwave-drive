@@ -13,7 +13,7 @@ export function bridgeForChunk(id:number):Skybridge|null {
   return {id,s:id*120+100,left:-left,right,floor:type==='gantry'?11.8:type==='open'?18.2:16.4,type,depth:type==='gantry'?2.2:3.8};
 }
 export function roadLamp(s:number,side:number):{x:number;y:number;s:number} {
-  const outer=side<0?17.9:Math.max(17.9,...road.corridorAt(s).map(v=>v[1]+.4));
+  const outer=17.9;
   return {x:side*(outer-3.3),y:10.7,s};
 }
 export function streetLamp(b:UrbanBatch,m:CityMaterials,x:number,z:number,side:number,highway=false): void {

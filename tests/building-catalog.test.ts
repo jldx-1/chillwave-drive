@@ -90,26 +90,27 @@ describe('100 authored architectural assets',()=>{
   });
 });
 describe('native-scale city placement and fixed distance detail',()=>{
-  it('shuffles a complete catalog cycle and streams every building without resizing its footprint',()=>{
+  it('shuffles all catalog identities into compact procedural frontage plots',()=>{
     const cycle=Array.from({length:100},(_,i)=>catalogAt('CATALOG',i).id);
     expect(new Set(cycle).size).toBe(100);expect(cycle).not.toEqual(BUILDING_CATALOG.map(a=>a.id));
     expect(catalogAt('CATALOG',-1).id).toBe(cycle[99]);
     const seen=new Set<number>();
     for(let id=0;id<100;id++)for(const p of cityChunk('CATALOG',id).parcels)if(p.assetId) {
       const a=buildingAsset(p.assetId);seen.add(a.id);
-      expect(p.width).toBe(a.plotWidth);expect(p.depth).toBe(a.plotDepth);expect(p.height).toBe(a.height);
+      expect(p.width).toBeGreaterThanOrEqual(28);expect(p.width).toBeLessThanOrEqual(42);
+      expect(p.depth).toBeGreaterThanOrEqual(26);expect(p.depth).toBeLessThanOrEqual(34);expect(p.height).toBe(a.height);
       expect(p.width).toBeLessThan(CITY_ROW_SPACING-10);
     }
     expect(seen.size).toBe(100);
   });
   it('instances all twenty signature far silhouettes at native scale with stable rebasing',()=>{
     const material=new THREE.MeshStandardMaterial(),sky=new CatalogSkyline(material);
-    const meshes=sky.group.children as THREE.InstancedMesh[];
+    const meshes=sky.group.children as import('../src/drive/view-batch').ViewBatch[];
     expect(new Set(meshes.map(m=>m.name)).size).toBe(20);
     sky.update('DISTANT',0,0);expect(sky.count).toBe(30);
     const matrix=new THREE.Matrix4(),before=meshes.map(m=>{m.getMatrixAt(0,matrix);return matrix.clone();});
     sky.update('DISTANT',0,1000);
-    meshes.forEach((m,i)=>{m.getMatrixAt(0,matrix);expect(matrix.elements[12]).toBeCloseTo(before[i].elements[12]);expect(matrix.elements[14]-before[i].elements[14]).toBeCloseTo(1000,3);expect(matrix.elements[0]).toBe(1);expect(m.count).toBeGreaterThan(0);expect(m.count).toBeLessThanOrEqual(2);});
+    meshes.forEach((m,i)=>{m.getMatrixAt(0,matrix);expect(matrix.elements[12]).toBeCloseTo(before[i].elements[12]);expect(matrix.elements[14]-before[i].elements[14]).toBeCloseTo(1000,3);expect(matrix.elements[0]).toBe(1);expect(m.activeCount).toBeGreaterThan(0);expect(m.activeCount).toBeLessThanOrEqual(2);});
     const geometries=new Set(meshes.map(m=>m.geometry)),materials=new Set(meshes.map(m=>m.material as THREE.Material));
     geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());
   });

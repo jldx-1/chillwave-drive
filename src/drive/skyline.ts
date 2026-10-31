@@ -1,3 +1,4 @@
+import { ViewBatch } from './view-batch';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Random, hashSeed } from '../core/random';
@@ -6,11 +7,11 @@ import { CatalogSkyline } from './catalog-skyline';
 /** Stable world-position districts overlap the detailed city; only the far window changes. */
 export class CityBackdrop {
   readonly group = new THREE.Group();
-  private masses: THREE.InstancedMesh;
-  private crowns: THREE.InstancedMesh;
-  private rounded: THREE.InstancedMesh;
+  private masses: ViewBatch;
+  private crowns: ViewBatch;
+  private rounded: ViewBatch;
   private ground: THREE.Mesh;
-  private beacons: THREE.InstancedMesh;
+  private beacons: ViewBatch;
   private landmarks: CatalogSkyline;
   private nightOrigin = { value: 0 };
   private transform = new THREE.Object3D();
@@ -23,6 +24,9 @@ export class CityBackdrop {
       shader.vertexShader = shader.vertexShader.replace('#include <worldpos_vertex>', `
         #include <worldpos_vertex>
         vec4 nightLocal = vec4(transformed,1.);
+        #ifdef USE_BATCHING
+          nightLocal = batchingMatrix * nightLocal;
+        #endif
         #ifdef USE_INSTANCING
           nightLocal = instanceMatrix * nightLocal;
         #endif
@@ -47,10 +51,10 @@ export class CityBackdrop {
     };
     material.customProgramCacheKey = () => 'night-skyline-v1';
     const geometry = new THREE.BoxGeometry(1, 1, 1);
-    this.masses = new THREE.InstancedMesh(geometry, material, 600); this.crowns = new THREE.InstancedMesh(geometry, material, 300);
-    this.rounded = new THREE.InstancedMesh(new RoundedBoxGeometry(1, 1, 1, 2, .16), material, 180);
+    this.masses = new ViewBatch(geometry, material, 600); this.crowns = new ViewBatch(geometry, material, 300);
+    this.rounded = new ViewBatch(new RoundedBoxGeometry(1, 1, 1, 2, .16), material, 180);
     this.landmarks=new CatalogSkyline(material);
-    this.beacons = new THREE.InstancedMesh(geometry, new THREE.MeshBasicMaterial({color:'#20aaff'}), 720); this.beacons.frustumCulled=false;
+    this.beacons = new ViewBatch(geometry, new THREE.MeshBasicMaterial({color:'#20aaff'}), 720); this.beacons.frustumCulled=false;
     this.masses.frustumCulled = this.crowns.frustumCulled = this.rounded.frustumCulled = false;
     this.masses.castShadow = this.crowns.castShadow = false;
     this.ground = new THREE.Mesh(new THREE.PlaneGeometry(6000, 16000), new THREE.MeshStandardMaterial({ color: '#121627', roughness: .93 }));
@@ -60,26 +64,27 @@ export class CityBackdrop {
   update(seed: string, s: number, origin: number): void {
     this.ground.position.z = sceneZ(s, origin); this.nightOrigin.value = origin;
     const block = Math.floor(s / 360), key = `${seed}:${block}:${origin}`; if (key === this.key) return; this.key = key;
+    this.masses.activeCount=this.crowns.activeCount=this.rounded.activeCount=this.beacons.activeCount=0;
     let count = 0, crown = 0, rounded = 0, beacon = 0;
     for (let id = block - 4; id <= block + 10; id++) {
       const r = new Random(hashSeed(`${seed}:distant-district:${id}`));
       for (const side of [-1, 1]) for (let row = 0; row < 4; row++) for (let slot = 0; slot < 3; slot++) {
         const h = r.range(row === 0 ? 100 : 160, row === 3 ? 390 : 290), w = r.range(22, 43), d = r.range(24, 60);
         const x = side * (600 + row * 115 + r.range(-18, 18)), worldS = id * 360 + slot * 120 + r.range(12, 70);
-        this.transform.position.set(x, h / 2 - .1, sceneZ(worldS, origin)); this.transform.scale.set(w, h, d); this.transform.rotation.y = 0; this.transform.updateMatrix(); if (row % 3 === 1) this.rounded.setMatrixAt(rounded++, this.transform.matrix); else this.masses.setMatrixAt(count++, this.transform.matrix);
+        this.transform.position.set(x, h / 2 - .1, sceneZ(worldS, origin)); this.transform.scale.set(w, h, d); this.transform.rotation.y = 0; this.transform.updateMatrix(); if (row % 3 === 1) (this.rounded.place(this.transform.matrix), rounded++); else (this.masses.place(this.transform.matrix), count++);
         for (const edge of [-1, 1]) {
           this.transform.position.set(x + edge * (w / 2 + .08), h * .66, sceneZ(worldS, origin) + d / 2 + .08);
-          this.transform.scale.set(.28, h * .68, .28); this.transform.updateMatrix(); this.beacons.setMatrixAt(beacon++,this.transform.matrix);
+          this.transform.scale.set(.28, h * .68, .28); this.transform.updateMatrix(); (this.beacons.place(this.transform.matrix), beacon++);
         }
         this.transform.position.set(x,h/2-.1,sceneZ(worldS,origin));
-        if (r.next() > .45 && crown < 300) { const ch = r.range(5, 27); this.transform.position.y = h + ch / 2; this.transform.scale.set(w * .6, ch, d * .63); this.transform.updateMatrix(); this.crowns.setMatrixAt(crown++, this.transform.matrix); }
+        if (r.next() > .45 && crown < 300) { const ch = r.range(5, 27); this.transform.position.y = h + ch / 2; this.transform.scale.set(w * .6, ch, d * .63); this.transform.updateMatrix(); (this.crowns.place(this.transform.matrix), crown++); }
       }
     }
     this.landmarks.update(seed,block,origin);
-    this.beacons.count = beacon; this.beacons.instanceMatrix.needsUpdate = true;
-    this.masses.count = count; this.crowns.count = crown; this.rounded.count = rounded; this.masses.instanceMatrix.needsUpdate = this.crowns.instanceMatrix.needsUpdate = this.rounded.instanceMatrix.needsUpdate = true;
+    this.beacons.activeCount = beacon; this.beacons.computeBoundingSphere();
+    this.masses.activeCount = count; this.crowns.activeCount = crown; this.rounded.activeCount = rounded;
   }
-  dispose(): void { const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(); this.group.traverse(o => { if (o instanceof THREE.Mesh) { geometries.add(o.geometry); const list = Array.isArray(o.material) ? o.material : [o.material]; for (const m of list) materials.add(m); } }); for (const g of geometries) g.dispose(); for (const m of materials) m.dispose(); }
+  dispose(): void { const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(); this.group.traverse(o => { if (o instanceof THREE.Mesh) { geometries.add(o.geometry); const list = Array.isArray(o.material) ? o.material : [o.material]; for (const m of list) materials.add(m); } }); this.group.traverse(o=>{if(o instanceof ViewBatch)o.dispose();}); for (const g of geometries) g.dispose(); for (const m of materials) m.dispose(); }
   reset(): void { this.key = ''; }
-  get diagnostics() { return { skylineBuildings: this.masses.count + this.rounded.count, landmarkTowers:this.landmarks.count, skylineWindow: this.key.split(':').slice(-2).join(':') }; }
+  get diagnostics() { return { skylineBuildings: this.masses.activeCount + this.rounded.activeCount, landmarkTowers:this.landmarks.count, skylineWindow: this.key.split(':').slice(-2).join(':') }; }
 }

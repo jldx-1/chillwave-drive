@@ -1,4 +1,4 @@
-import { road, overpassesAt } from './road';
+import { road, overpassesAt, districtPassagesAt } from './road';
 import type { Vehicle } from './vehicle';
 import { bridgeForChunk } from './city-infrastructure';
 
@@ -26,7 +26,7 @@ export class EnvironmentCollisions {
       const speed=Math.hypot(player.velocityS,player.lateral,player.jumpVelocity);
       if(speed>=14){this.brokenSigns.add(id);hits.push({kind:'sign',x:player.x,s:sign.s,speed,id});player.speed*=.9;player.collide(speed*.12);}
     }
-    const structures=overpassesAt((low+high)/2);
+    const structures=[...overpassesAt((low+high)/2),...districtPassagesAt((low+high)/2)];
     if(highY>=10)for(let id=Math.floor(low/120)-1;id<=Math.floor(high/120)+1;id++){
       const bridge=bridgeForChunk(id);if(bridge)structures.push({id:1000000+id,s:bridge.s,x:(bridge.left+bridge.right)/2,width:bridge.right-bridge.left,length:bridge.depth,underside:bridge.floor-.8,thickness:1.4});
     }

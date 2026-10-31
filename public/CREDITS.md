@@ -1,3 +1,12 @@
+# Procedural cyberpunk architecture
+
+HIVE, ARCOLOGY and CAPSULE generators, props, signs and tube lettering are adapted from
+[CyberPunkProceduralBuildingsThreeJS](https://github.com/achrefelouafi/CyberPunkProceduralBuildingsThreeJS)
+by mohamedachrefelouafi, copyright 2026, under the [MIT license](licenses/cyberpunk-buildings-MIT.txt).
+Chillwave Drive adds instancing, parcel fitting, shared animation time, stable origin rebasing,
+and height mist. The procedural material option is used; the standalone configurator,
+Blender project, PBR scans and reference checkout are not distributed with the game.
+
 # Active futuristic fleet
 
 The 15 cyber vehicle prefabs, wheels, cockpit and lighting geometry in `src/drive/cyber-prefabs.ts` and `src/drive/reference-coachwork.ts` were authored for Chillwave Drive using the supplied concept sheets as visual references. The original geometry follows the project license. [Reusable GLB exports](models/cyber/manifest.json) include all fifteen identities at three detail levels and the player cockpit rig. Runtime traffic and the playable NEBULA XR use these prefabs. Contemporary GLBs listed below are retained as archived assets and authoring fixtures.

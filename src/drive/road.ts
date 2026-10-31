@@ -14,21 +14,18 @@ export interface Route {
 }
 interface Phase { kind: Exclude<RoadPhase, 'highway'>; a: number; b: number; x0: number; x1: number; speed: number }
 const outerLane = LANES[LANES.length - 1];
-const phases: Phase[] = [
-  { kind: 'deceleration', a: 0, b: 100, x0: outerLane, x1: 17.3, speed: 30 },
-  { kind: 'exit', a: 100, b: 280, x0: 17.3, x1: 32, speed: 24 },
-  { kind: 'service', a: 280, b: 620, x0: 32, x1: 32, speed: 22 },
-  { kind: 'return', a: 620, b: 800, x0: 32, x1: 17.3, speed: 24 },
-  { kind: 'acceleration', a: 800, b: 900, x0: 17.3, x1: outerLane, speed: 36 },
-];
-// Each exit is a continuous northbound street with a different offset and bend.
-const phaseVariants: Phase[][] = [phases, ...([[36,36],[35,28]] as const).map(([entry,end]) =>
-  phases.map(p => p.kind === 'exit' ? { ...p, x1: entry } :
-    p.kind === 'service' ? { ...p, x0: entry, x1: end } :
-    p.kind === 'return' ? { ...p, x0: end } : p))];
+const phaseVariants: Phase[][] = ([[82,142,90],[104,174,112],[76,132,88]] as const).map(([entry,market,returnX]) => [
+  { kind:'deceleration',a:0,b:100,x0:outerLane,x1:17.3,speed:30 },
+  { kind:'exit',a:100,b:280,x0:17.3,x1:entry,speed:20 },
+  { kind:'service',a:280,b:400,x0:entry,x1:market,speed:18 },
+  { kind:'service',a:400,b:500,x0:market,x1:market,speed:18 },
+  { kind:'service',a:500,b:620,x0:market,x1:returnX,speed:18 },
+  { kind:'return',a:620,b:800,x0:returnX,x1:17.3,speed:20 },
+  { kind:'acceleration',a:800,b:900,x0:17.3,x1:outerLane,speed:36 },
+]);
 const routePhases = (id:number):Phase[] => phaseVariants[((id % 3) + 3) % 3];
-const routeNames = ['NEON MARKET STREET', 'INDUSTRIAL ACCESS', 'CANAL DISTRICT'] as const;
-const routeEdge = (id: number, phase: RoadPhase) => `detour:${id}:${phase}`;
+const routeNames = ['NEON MARKET WEAVE', 'FOUNDRY BLOCK RUN', 'CANAL ARCADE ROUTE'] as const;
+const routeEdge = (id: number, phase: RoadPhase, segment:number) => `detour:${id}:${phase}:${segment}`;
 /** Directed lane topology and the centerline geometry used by physics, rendering, and navigation. */
 export class RoadGraph {
   private readonly routeCache = new Map<number, Route>();
@@ -38,7 +35,7 @@ export class RoadGraph {
     const exit = id * this.interval + this.exitAt, scale = this.detourLength / 900;
     const result:Route = { id, exit, rejoin: exit + this.detourLength, entryEnd: exit + 100 * scale,
       mergeStart: exit + 800 * scale, kind: 'detour', district: id % 2 === 0 ? 'commercial' : 'industrial', name: routeNames[((id % 3) + 3) % 3],
-      edges: routePhases(id).map(p => routeEdge(id, p.kind)) };
+      edges: routePhases(id).map((p,i) => routeEdge(id, p.kind,i)) };
     if(this.routeCache.size>=8)this.routeCache.delete(this.routeCache.keys().next().value!);
     this.routeCache.set(id,result);return result;
   }
@@ -66,18 +63,22 @@ export class RoadGraph {
     const derivative = (phase.x1 - phase.x0) * 30 * u * u * (1 - u) * (1 - u) / distance;
     const second = (phase.x1 - phase.x0) * 60 * u * (1 - u) * (1 - 2 * u) / (distance * distance);
     const length = Math.hypot(1, derivative);
+    const curvature=second/length**3;
+    // District turns are approached at a speed consistent with wet-road lateral grip.
+    const speedLimit=Math.min(phase.speed,Math.sqrt(2.4/Math.max(.0001,Math.abs(curvature))));
     return { x: phase.x0 + (phase.x1 - phase.x0) * smooth, s, tangentX: derivative / length,
-      tangentS: 1 / length, width: 7.2, curvature: second / length ** 3, speedLimit: phase.speed, phase: phase.kind };
+      tangentS: 1 / length, width: 9.6, curvature, speedLimit, phase: phase.kind };
   }
   branchCenter(s: number): number | undefined { return this.sampleDetour(s)?.x; }
   bounds(s: number): [number, number][] {
-    const branch = this.branchCenter(s);
-    return branch === undefined ? [[1.25, 15.45]] : [[1.25, 15.45], [branch - 2.6, branch + 2.6]];
+    const branch = this.sampleDetour(s);
+    const half=branch?(branch.width/2-1.05)/branch.tangentS:0;
+    return branch === undefined ? [[1.25, 15.45]] : [[1.25, 15.45], [branch.x-half,branch.x+half]];
   }
   /** Reserved physical roads, shoulders, and clear verges for deterministic building placement. */
   corridorAt(s: number): [number, number][] {
     const branch = this.sampleDetour(s);
-    return branch ? [[-19.5, 19.5], [branch.x - branch.width / 2 - 3.8, branch.x + branch.width / 2 + 3.8]] : [[-19.5, 19.5]];
+    return branch ? [[-19.5, 19.5], [branch.x - branch.width / (2*branch.tangentS) - 1.8, branch.x + branch.width / (2*branch.tangentS) + 1.8]] : [[-19.5, 19.5]];
   }
   constrain(x: number, s: number): number {
     const ranges = this.bounds(s);
@@ -112,7 +113,7 @@ export class RoadGraph {
     return clamp(x, lo, hi);
   }
   onDetour(x: number, s: number): boolean {
-    const sample = this.sampleDetour(s); return sample !== undefined && x > 16 && Math.abs(x - sample.x) < sample.width / 2;
+    const sample = this.sampleDetour(s); return sample !== undefined && x > 16 && Math.abs(x - sample.x) < sample.width / (2*sample.tangentS);
   }
   /** One directed edge per lane makes every fork/merge endpoint geometrically unambiguous. */
   networkAt(s: number): RoadNetwork {
@@ -123,7 +124,7 @@ export class RoadGraph {
     };
     const add = (key: string, from: string, to: string, kind: RoadPhase, a: number, b: number, direction: 1 | -1, speedLimit: number, index: number) => {
       const lane = `${key}:lane`; edges.push({ id: key, from, to, kind, startS: a, endS: b, speedLimit, lane });
-      lanes.push({ id: lane, edge: key, index, direction, width: kind === 'highway' ? 3.6 : 7.2, successors: [] });
+      lanes.push({ id: lane, edge: key, index, direction, width: kind === 'highway' ? 3.6 : 9.6, successors: [] });
     };
     for (const direction of [1, -1] as const) for (let lane = 0; lane < 4; lane++) {
       const x = (direction === 1 ? LANES : ONCOMING)[lane], stations = [start, route.exit, route.rejoin, end];
@@ -132,10 +133,10 @@ export class RoadGraph {
     }
     let previous = `highway:1:3:${route.exit}`;
     const scale = this.detourLength / 900;
-    for (const phase of routePhases(id)) {
+    for (const [segment,phase] of routePhases(id).entries()) {
       const a = route.exit + phase.a * scale, b = route.exit + phase.b * scale;
-      const next = phase.kind === 'acceleration' ? `highway:1:3:${route.rejoin}` : node(`connector:${id}:${phase.kind}`, phase.x1, b, 'connector');
-      add(routeEdge(id, phase.kind), previous, next, phase.kind, a, b, 1, phase.speed, 0); previous = next;
+      const next = phase.kind === 'acceleration' ? `highway:1:3:${route.rejoin}` : node(`connector:${id}:${phase.kind}:${segment}`, phase.x1, b, 'connector');
+      add(routeEdge(id, phase.kind,segment), previous, next, phase.kind, a, b, 1, phase.speed, 0); previous = next;
     }
     for (const lane of lanes) {
       const edge = edges.find(e => e.id === lane.edge)!;
@@ -182,6 +183,18 @@ export function overpassesAt(s: number): Overpass[] {
   for (let id = chunk - 2; id <= chunk + 2; id++) if ((id % 9 + 9) % 9 === 6) {
     const center = id * 120 + 60;
     result.push({ id, s: center, x: 0, width: road.routeAt(center) ? 84 : 70, length: 13, underside: 8.3, thickness: 1.4 });
+  }
+  return result;
+}
+
+/** Occupied upper floors span a clear city street, shared by rendering, rain and jump collisions. */
+export function districtPassagesAt(s:number):Overpass[] {
+  const result:Overpass[]=[];
+  for(let id=Math.floor(s/road.interval)-1;id<=Math.floor(s/road.interval)+1;id++) {
+    const at=id*road.interval+road.exitAt+450*road.detourLength/900;
+    if(Math.abs(at-s)>240)continue;
+    const center=road.sampleDetour(at)!;
+    result.push({id:2000000+id,x:center.x,s:at,width:24,length:12,underside:8.8,thickness:7.2});
   }
   return result;
 }

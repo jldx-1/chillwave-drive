@@ -52,7 +52,7 @@ export class DriveGame {
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'playing') this.pause(); this.last = 0; });
     this.ui.canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); if (this.state === 'playing') this.pause(); this.ui.error(); });
     // QA observations and camera probes; ordinary gameplay has no simulation shortcuts.
-    if (new URLSearchParams(location.search).has('qa')) Object.defineProperty(window, '__drive', { value: { previewFleet:(id:CyberModel,angle:number,lod?:0|1|2)=>this.world.previewFleet(this.camera.camera,id,angle,lod),previewCity:(distance:number,rear:boolean,windowDistance?:number,probe?:{occluder?:number;sun?:boolean})=>this.world.previewCity(this.camera.camera,distance,rear,windowDistance,probe), advance: (seconds: number) => this.advanceQA(seconds), setCityNeon:(enabled:boolean)=>this.world.setCityNeon(enabled), streamAt: (distance:number) => { this.world.stream(distance);return this.world.sampleResources(this.camera.camera); }, inspect: () => ({ radio:this.radio.diagnostics,controls: this.input.sample(), state: this.state, x: this.vehicle.x, s: this.vehicle.s, speed: this.vehicle.speed, lateral: this.vehicle.lateral, yaw: this.vehicle.yaw, steering: this.vehicle.steering, yawRate:this.vehicle.yawRate, cameraY:this.camera.camera.position.y, cameraFov:this.camera.camera.fov, slip: this.vehicle.slip, slipAngle: this.vehicle.slipAngle, drift: this.vehicle.driftAmount, velocityS: this.vehicle.velocityS, damage: this.vehicle.damage, exploded: this.vehicle.exploded, shield: this.vehicle.shield, turbo: this.vehicle.turbo, nitro:this.vehicle.nitro, nitroFuel:this.vehicle.nitroFuel, nitroReady:this.vehicle.nitroReady, nitroCooldown:this.vehicle.nitroCooldown, jumpHeight:this.vehicle.jumpHeight, airborne:this.vehicle.airborne, pulseCooldown:this.vehicle.pulseCooldown, ramps:jumpRamps(this.vehicle.s), pickups: this.powerups.nearby(this.vehicle.s), view: this.records.settings.view, elapsed: this.elapsed, capture: this.traffic.capture, joins: this.traffic.joins, level: this.traffic.level, nearMisses: this.traffic.nearMisses, score:this.score.value, multiplier:this.score.multiplier, scoreHits:this.score.hits, agents: this.traffic.agents.map(a => ({ id: a.id, s: a.s, x: a.x, direction: a.direction, kind: a.kind, model:a.model,active: a.active, yaw: a.yaw, state: a.state })), ...this.world.diagnostics }) } });
+    if (new URLSearchParams(location.search).has('qa')) Object.defineProperty(window, '__drive', { value: { previewFleet:(id:CyberModel,angle:number,lod?:0|1|2)=>this.world.previewFleet(this.camera.camera,id,angle,lod),previewCity:(distance:number,rear:boolean,windowDistance?:number,probe?:{occluder?:number;sun?:boolean;district?:boolean})=>this.world.previewCity(this.camera.camera,distance,rear,windowDistance,probe), advance: (seconds: number) => this.advanceQA(seconds), setCityNeon:(enabled:boolean)=>this.world.setCityNeon(enabled), streamAt: (distance:number) => { this.world.stream(distance);return this.world.sampleResources(this.camera.camera); }, inspect: () => ({ radio:this.radio.diagnostics,controls: this.input.sample(), state: this.state, x: this.vehicle.x, s: this.vehicle.s, speed: this.vehicle.speed, lateral: this.vehicle.lateral, yaw: this.vehicle.yaw, steering: this.vehicle.steering, yawRate:this.vehicle.yawRate, cameraY:this.camera.camera.position.y, cameraFov:this.camera.camera.fov, slip: this.vehicle.slip, slipAngle: this.vehicle.slipAngle, drift: this.vehicle.driftAmount, velocityS: this.vehicle.velocityS, damage: this.vehicle.damage, exploded: this.vehicle.exploded, shield: this.vehicle.shield, turbo: this.vehicle.turbo, nitro:this.vehicle.nitro, nitroFuel:this.vehicle.nitroFuel, nitroReady:this.vehicle.nitroReady, nitroCooldown:this.vehicle.nitroCooldown, jumpHeight:this.vehicle.jumpHeight, airborne:this.vehicle.airborne, pulseCooldown:this.vehicle.pulseCooldown,missiles:this.traffic.missiles.active.map(m=>({id:m.id,target:m.target,x:m.x,s:m.s,y:m.y,age:m.age})), ramps:jumpRamps(this.vehicle.s), pickups: this.powerups.nearby(this.vehicle.s), view: this.records.settings.view, elapsed: this.elapsed, capture: this.traffic.capture, joins: this.traffic.joins, level: this.traffic.level, nearMisses: this.traffic.nearMisses, score:this.score.value, multiplier:this.score.multiplier, scoreHits:this.score.hits, agents: this.traffic.agents.map(a => ({ id: a.id, s: a.s, x: a.x, direction: a.direction, kind: a.kind, model:a.model,active: a.active, yaw: a.yaw, state: a.state })), ...this.world.diagnostics }) } });
     requestAnimationFrame(t => this.frame(t));
   }
   private configure(): void { this.world?.configure(this.records.settings.quality); this.audio.configure(this.records.settings);this.radio.configure(this.records.settings); }
@@ -78,9 +78,9 @@ export class DriveGame {
     else if (action === 'camera') { this.records.settings.view = this.records.settings.view === 'chase' ? 'cockpit' : 'chase'; this.records.save(); this.camera.reset(); }
     else if (action === 'mute') { this.records.settings.musicEnabled=!['playing','buffering','loading'].includes(this.radio.diagnostics.state);this.records.save();this.configure();this.radio.play(this.records.settings); }
     else if((action==='blast-front'||action==='blast-rear')&&this.state==='playing') {
-      const direction=action==='blast-front'?1:-1,result=this.traffic.firePulse(this.vehicle,direction);
-      if(result.status==='hit'&&result.target){this.world.explodeTraffic(result.target.x,result.target.s);this.audio.impact(35);this.ui.notify('TARGET DESTROYED · PULSE RECHARGING');}
-      else this.ui.notify(result.status==='recharging'?'PULSE RECHARGING':`NO CAR ${direction===1?'AHEAD':'BEHIND'} IN RANGE`);
+      const direction=action==='blast-front'?1:-1,result=this.traffic.fireMissile(this.vehicle,direction);
+      if(result.status==='fired'){this.audio.missileLaunch();this.ui.notify('MISSILE AWAY · TARGET LOCKED');}
+      else this.ui.notify(result.status==='recharging'?'MISSILE RECHARGING':`NO CAR ${direction===1?'AHEAD':'BEHIND'} IN RANGE`);
       this.ui.update(this.vehicle,this.traffic,this.clock,this.score);
     }
     else if (['settings', 'controls', 'garage'].includes(action)) { if (this.state === 'playing') this.pause(); this.ui.open(action); }
@@ -119,7 +119,7 @@ export class DriveGame {
     if(this.vehicle.landingImpact>4)this.audio.impact(this.vehicle.landingImpact);
     const collected = this.powerups.collect(this.vehicle);
     const event = this.traffic.step(STEP, this.vehicle, this.elapsed);
-    for(const blast of event.explosions)this.world.explodeTraffic(blast.x,blast.s);
+    for(const blast of event.explosions){this.world.explodeTraffic(blast.x,blast.s);if(blast.missile)this.ui.notify('TARGET DESTROYED · MISSILE IMPACT');}
     if(!event.hit&&event.explosions.some(blast=>Math.abs(blast.s-this.vehicle.s)<100))this.audio.impact(45);
     this.score.advance(this.vehicle.distance);
     let lost=0;
@@ -152,17 +152,17 @@ export class DriveGame {
     const steps=Math.min(36000,Math.max(0,Math.round(seconds/STEP)));
     for(let i=0;i<steps&&this.state==='playing';i++){
       const input=this.input.sample();this.step(input);this.clock+=STEP;
-      if(i%120===0)this.world.update(0,this.clock,this.vehicle,this.vehicle.pose(1),this.traffic.agents,false,true,1,this.records.settings.view,this.powerups.nearby(this.vehicle.s));
+      if(i%120===0)this.world.update(0,this.clock,this.vehicle,this.vehicle.pose(1),this.traffic.agents,false,true,1,this.records.settings.view,this.powerups.nearby(this.vehicle.s),0,this.traffic.missiles.active);
       this.camera.update(STEP,this.vehicle,this.vehicle.pose(1),this.world.origin,this.records.settings.view,input.rear,this.records.settings.reducedMotion,this.world.player.eye);
     }
-    this.world.update(0,this.clock,this.vehicle,this.vehicle.pose(1),this.traffic.agents,false,this.records.settings.reducedMotion,1,this.records.settings.view,this.powerups.nearby(this.vehicle.s));
+    this.world.update(0,this.clock,this.vehicle,this.vehicle.pose(1),this.traffic.agents,false,this.records.settings.reducedMotion,1,this.records.settings.view,this.powerups.nearby(this.vehicle.s),0,this.traffic.missiles.active);
     this.ui.update(this.vehicle,this.traffic,this.clock,this.score);
   }
   private frame(now: number): void {
     requestAnimationFrame(t => this.frame(t));
     const wallDt = this.last ? Math.max(0, (now - this.last) / 1000) : 0;
     const dt = Math.min(.1, wallDt); this.last = now;
-    if (document.hidden) return;
+    if (document.hidden || !this.world.assetsLoaded) return;
     const stateAtStart = this.state;
     let input = neutral();
     if (this.state === 'playing') {
@@ -173,7 +173,7 @@ export class DriveGame {
       const effectsDt = this.state === 'over' ? (stateAtStart === 'playing' ? 0 : wallDt) : dt;
       this.clock += this.state === 'over' ? effectsDt : dt;
       const pose = this.state === 'playing' ? this.vehicle.pose(Math.max(0, this.accumulator / STEP)) : { x: this.vehicle.x, s: this.vehicle.s, yaw: this.vehicle.yaw };
-      this.world.update(dt, this.clock, this.vehicle, pose, this.state === 'menu' ? [] : this.traffic.agents, input.brake > 0, this.records.settings.reducedMotion, this.state === 'playing' ? Math.max(0, this.accumulator / STEP) : 1,this.records.settings.view,this.state === 'menu' ? [] : this.powerups.nearby(this.vehicle.s),effectsDt);
+      this.world.update(dt, this.clock, this.vehicle, pose, this.state === 'menu' ? [] : this.traffic.agents, input.brake > 0, this.records.settings.reducedMotion, this.state === 'playing' ? Math.max(0, this.accumulator / STEP) : 1,this.records.settings.view,this.state === 'menu' ? [] : this.powerups.nearby(this.vehicle.s),effectsDt,this.state==='menu'?[]:this.traffic.missiles.active);
       if (this.state === 'menu') {
         const startButton=document.querySelector<HTMLButtonElement>('.start-button')!;startButton.disabled=!this.world.assetsLoaded;
         this.camera.camera.position.set(12.3, 2.7, 7.6); this.camera.camera.lookAt(5.5, .95, -3.8); this.camera.camera.fov = 54; this.camera.camera.updateProjectionMatrix();

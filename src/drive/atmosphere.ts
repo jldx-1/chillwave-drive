@@ -104,21 +104,28 @@ export class CityAtmosphere {
     scene.traverse(o=>{
       if(!(o instanceof THREE.Mesh))return;
       for(const material of Array.isArray(o.material)?o.material:[o.material]) {
-        if(this.hooked.has(material)||!(material instanceof THREE.MeshStandardMaterial||material instanceof THREE.MeshBasicMaterial)||!material.fog)continue;
+        if(this.hooked.has(material)||!(material instanceof THREE.MeshStandardMaterial||material instanceof THREE.MeshBasicMaterial||material instanceof THREE.ShaderMaterial)||!material.fog)continue;
         this.hooked.add(material);
         const previous=material.onBeforeCompile,key=material.customProgramCacheKey();
         material.onBeforeCompile=(shader,renderer)=>{
           previous.call(material,shader,renderer);
           shader.uniforms.mistOrigin=this.origin;
-          shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 mistWorldPosition;');
+          shader.vertexShader=material instanceof THREE.ShaderMaterial
+            ? 'varying vec3 mistWorldPosition;\n'+shader.vertexShader
+            : shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 mistWorldPosition;');
           shader.vertexShader=shader.vertexShader.replace('#include <fog_vertex>',`#include <fog_vertex>
-            vec4 mistVertex=vec4(transformed,1.);
+            vec4 mistVertex=vec4(${material instanceof THREE.ShaderMaterial?'position':'transformed'},1.);
+            #ifdef USE_BATCHING
+              mistVertex=batchingMatrix*mistVertex;
+            #endif
             #ifdef USE_INSTANCING
               mistVertex=instanceMatrix*mistVertex;
             #endif
             mistWorldPosition=(modelMatrix*mistVertex).xyz;
           `);
-          shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 mistWorldPosition;uniform float mistOrigin;\n'+fogSkyColorGLSL);
+          shader.fragmentShader=material instanceof THREE.ShaderMaterial
+            ? 'varying vec3 mistWorldPosition;uniform float mistOrigin;\n'+fogSkyColorGLSL+'\n'+shader.fragmentShader
+            : shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 mistWorldPosition;uniform float mistOrigin;\n'+fogSkyColorGLSL);
           shader.fragmentShader=shader.fragmentShader.replace('#include <fog_fragment>',heightFogGLSL);
         };
         material.customProgramCacheKey=()=>`${key}:height-mist-v3`;material.needsUpdate=true;

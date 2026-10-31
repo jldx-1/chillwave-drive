@@ -27,7 +27,7 @@ export class Presentation {
        gl_FragColor=vec4(vec3(1.-occlusion*mistAoFade),1.);`);
     const renderAO=this.ao.render.bind(this.ao);
     this.ao.render=(...args)=>withoutColorEffects(scene,()=>renderAO(...args));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(640, 400), .32, .6, 1.1); this.composer.addPass(this.bloom); this.composer.addPass(new OutputPass());
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(640, 400), .48, .55, .95); this.composer.addPass(this.bloom); this.composer.addPass(new OutputPass());
   }
   configure(quality: Quality, width: number, height: number, ratio: number): void {
     const samples = Math.min(quality === 'high' || quality === 'ultra' ? 4 : 2, this.sampleLimit);

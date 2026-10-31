@@ -104,7 +104,7 @@ describe('road graph and precision', () => {
       expect(graph.routeAt(exit + 450)?.rejoin).toBe(exit + 900);
       expect(graph.validateNetwork(i)).toEqual([]);
       let previous = LANES[3];
-      for (let d = 0; d <= 900; d++) { const center = graph.branchCenter(exit + d)!; expect(Math.abs(center - previous)).toBeLessThan(.2); expect(graph.constrain(center, exit + d)).toBe(center); previous = center; }
+      for (let d = 0; d <= 900; d++) { const center = graph.branchCenter(exit + d)!; expect(Math.abs(center - previous)).toBeLessThan(1.6); expect(graph.constrain(center, exit + d)).toBe(center); previous = center; }
     }
   });
   it('drives the complete detour with the same steering dynamics and rejoins', () => {

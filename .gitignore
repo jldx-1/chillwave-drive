@@ -5,3 +5,7 @@ dist/
 coverage/
 test-results/
 playwright-report/
+
+# Local reference checkouts; never publish or commit the standalone demo.
+/CyberPunkProceduralBuildingsThreeJS/
+/tools/cyberpunk-buildings-source/

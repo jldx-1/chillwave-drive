@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { LANES, POLICE_TUNE, STEP, TUNE, VEHICLE_DIMENSIONS, neutral } from '../src/drive/config';
-import { RoadGraph, overpassesAt, road } from '../src/drive/road';
+import { RoadGraph, overpassesAt, districtPassagesAt, road } from '../src/drive/road';
 import { Traffic, type Agent } from '../src/drive/traffic';
+import { rainSheltered } from '../src/drive/weather';
 import { Vehicle, steeringLimit } from '../src/drive/vehicle';
 
 function agent(traffic: Traffic, kind: Agent['kind'], id: number, s: number, x = LANES[3]): Agent {
@@ -20,7 +21,7 @@ describe('connected highway exit and reentry topology', () => {
     for (const id of [0, 1, 17, 330, 333333]) {
       expect(graph.validateNetwork(id)).toEqual([]);
       const network = graph.networkAt(id * graph.interval + 900);
-      expect(network.edges.filter(e => e.kind !== 'highway').map(e => e.kind)).toEqual(['deceleration', 'exit', 'service', 'return', 'acceleration']);
+      expect(network.edges.filter(e => e.kind !== 'highway').map(e => e.kind)).toEqual(['deceleration', 'exit', 'service', 'service', 'service', 'return', 'acceleration']);
       expect(network.lanes.filter(l => l.direction === -1)).toHaveLength(12);
       const fork = network.lanes.find(l => l.edge === `main:${id}:1:3:0`)!;
       expect(fork.successors).toHaveLength(2);
@@ -110,12 +111,13 @@ describe('police vehicle integration', () => {
     police.reset(); expect(police.tuning).toBe(POLICE_TUNE); expect(police.minimumS).toBe(-Infinity);
     expect(police.speed).toBe(0); expect(police.steering).toBe(0);
   });
-  it('follows a reachable player detour using steering and rejoins without relocating', () => {
+  it.each([0,1,2])('follows district %i using steering and rejoins without relocating', (district) => {
+    const base=district*road.interval;
     const traffic = new Traffic('COP-LOOP', 'low'), player = new Vehicle(); traffic.reset();
-    const cop = agent(traffic, 'police', 1, 780); cop.speed = 22; traffic.agents = [cop]; traffic.activate(cop);
-    player.s = 890; player.x = road.branchCenter(player.s)!; player.speed = 22; player.setWorldVelocity(0, 22);
+    const cop = agent(traffic, 'police', 1, base+780); cop.speed = 22; traffic.agents = [cop]; traffic.activate(cop);
+    player.s = base+890; player.x = road.branchCenter(player.s)!; player.speed = 22; player.setWorldVelocity(0, 22);
     let usedService = false, peakSteering = 0, contacts = 0;
-    for (let frame = 0; frame < 50 / STEP && cop.s < 1720; frame++) {
+    for (let frame = 0; frame < 95 / STEP && cop.s < base+1720; frame++) {
       player.previous = { x: player.x, s: player.s, yaw: 0 };
       player.s += 22 * STEP; player.x = road.branchCenter(player.s) ?? LANES[3];
       const before = { x: cop.x, s: cop.s };
@@ -124,9 +126,9 @@ describe('police vehicle integration', () => {
       const [lo,hi]=road.policeBounds(cop.s,cop.yaw,POLICE_TUNE.footprint,cop.route);
       expect(cop.x).toBeGreaterThanOrEqual(lo-1e-8);expect(cop.x).toBeLessThanOrEqual(hi+1e-8);
       peakSteering = Math.max(peakSteering, Math.abs(cop.steering ?? 0));
-      if (cop.s > 1080 && cop.s < 1420 && cop.x > 30) usedService = true;
+      if (cop.s > base+1080 && cop.s < base+1420 && cop.x > 30) usedService = true;
     }
-    expect(usedService).toBe(true); expect(cop.s).toBeGreaterThan(1700);
+    expect(usedService).toBe(true); expect(cop.s).toBeGreaterThan(base+1700);
     expect(cop.x).toBeLessThan(15.5); expect(peakSteering).toBeGreaterThan(.01);
     expect(contacts).toBe(0); expect(cop.damage).toBe(0); expect(cop.active).toBe(true);
   });
@@ -169,12 +171,23 @@ describe('northbound side street variety', () => {
     const routes = [0, 1, 2].map(id => {
       const start = id * graph.interval + graph.exitAt;
       const samples = Array.from({length: 181}, (_, i) => graph.sampleDetour(start + i * 5)!);
-      expect(samples.every(s => s.tangentS > .98 && Math.abs(s.curvature) * s.speedLimit ** 2 < 3)).toBe(true);
+      expect(samples.every(s => s.tangentS > .55 && Math.abs(s.curvature) * s.speedLimit ** 2 < 3)).toBe(true);
       expect(graph.validateNetwork(id)).toEqual([]);
       return { name: graph.routeAt(start + 450)!.name, center: samples[90].x };
     });
     expect(new Set(routes.map(r => r.name)).size).toBe(3);
     expect(new Set(routes.map(r => r.center)).size).toBe(3);
+    expect(routes.every(r=>r.center>120)).toBe(true);
+    for(const id of [0,1,2]) {
+      const base=id*graph.interval;
+      expect(graph.sampleDetour(base+1140)!.tangentX).toBeGreaterThan(0);
+      expect(graph.sampleDetour(base+1360)!.tangentX).toBeLessThan(0);
+      const passage=districtPassagesAt(base+1250).find(p=>p.id===2000000+id)!;
+      expect(passage.x).toBe(graph.branchCenter(passage.s));
+      expect(passage.underside).toBeGreaterThan(8);
+      expect(rainSheltered(passage.x,passage.s)).toBe(true);
+      expect(rainSheltered(passage.x,passage.s+20)).toBe(false);
+    }
   });
   it('can drive each different route from exit to reentry', () => {
     const graph = new RoadGraph();
@@ -182,11 +195,14 @@ describe('northbound side street variety', () => {
       const start=id*graph.interval+graph.exitAt, player=new Vehicle();
       player.s=start-10; player.x=14; player.speed=22;
       let usedStreet=false;
-      for(let i=0;i<65/STEP&&player.s<start+920;i++) {
-        const target=graph.branchCenter(player.s+18)??14;
-        const heading=Math.atan2(target-player.x,18);
-        const steer=Math.max(-1,Math.min(1,Math.atan((heading-player.yaw)*3*2.7/Math.max(1,player.speed))/steeringLimit(player.speed)));
-        player.step(STEP,{...neutral(),steer,throttle:player.speed<22?.27:0});
+      for(let i=0;i<110/STEP&&player.s<start+920;i++) {
+        const lookahead=14+Math.max(0,player.speed)*.45;
+        const target=graph.branchCenter(player.s+lookahead)??14;
+        const heading=Math.atan2(target-player.x,lookahead);
+        const wheelAngle=Math.atan2(2*player.tuning.wheelbase*Math.sin(heading-player.yaw),lookahead);
+        const steer=Math.max(-1,Math.min(1,wheelAngle/steeringLimit(player.speed)));
+        const speed=Math.min(graph.sampleDetour(player.s)?.speedLimit??22,graph.sampleDetour(player.s+24)?.speedLimit??22);
+        player.step(STEP,{...neutral(),steer,throttle:player.speed<speed?.33:0,brake:player.speed>speed+1?.4:0});
         if(player.s>start+280&&player.s<start+620&&graph.onDetour(player.x,player.s))usedStreet=true;
       }
       expect(usedStreet).toBe(true);expect(player.s).toBeGreaterThan(start+900);

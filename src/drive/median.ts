@@ -40,5 +40,5 @@ export function medianBarriers(s: number, time: number, held?: number) {
 export function constrainMedian(x: number, s: number, oldX: number, time: number, held?: number): number {
   // A car already straddling the center meets the end cap in the contact solver.
   if (Math.abs(oldX) < 1.25 || medianIsOpen(s, time, held)) return x;
-  return oldX < 0 ? clamp(x, -15.45, -1.25) : clamp(x, 1.25, 100);
+  return oldX < 0 ? clamp(x, -15.45, -1.25) : Math.max(x, 1.25);
 }

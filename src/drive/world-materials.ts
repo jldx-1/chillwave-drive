@@ -70,7 +70,10 @@ export class CityMaterials {
   readonly neutralLight = new THREE.MeshStandardMaterial({color:'#dce4e7',emissive:'#c0d9e8',emissiveIntensity:1.65,roughness:.4});
   readonly palmLeaf = new THREE.MeshStandardMaterial({color:'#314a45',roughness:.76,side:THREE.DoubleSide});
   readonly leaves: THREE.MeshStandardMaterial[] = [];
-  readonly facades = [facade(43, '#11243e', false), facade(76, '#26223b', true, true), facade(18, '#24263e', true), facade(31, '#172e49', false)];
+  private facadeCache?: THREE.MeshStandardMaterial[];
+  get facades(): THREE.MeshStandardMaterial[] {
+    return this.facadeCache ??= [facade(43, '#11243e', false), facade(76, '#26223b', true, true), facade(18, '#24263e', true), facade(31, '#172e49', false)];
+  }
   readonly cyan = new THREE.MeshStandardMaterial({ color:'#1eb5e6', emissive:'#05beff', emissiveIntensity:3, roughness:.3 });
   readonly pink = new THREE.MeshStandardMaterial({ color:'#e82caa', emissive:'#ff13ad', emissiveIntensity:3, roughness:.3 });
   readonly violet = new THREE.MeshStandardMaterial({ color:'#7055eb', emissive:'#6840ff', emissiveIntensity:2.5, roughness:.3 });

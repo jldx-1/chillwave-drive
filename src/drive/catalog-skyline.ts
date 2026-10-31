@@ -1,3 +1,4 @@
+import { ViewBatch } from './view-batch';
 import * as THREE from 'three';
 import { buildingAsset } from './building-catalog';
 import { buildCatalogSilhouette } from './catalog-buildings';
@@ -9,7 +10,7 @@ import { sceneZ } from './road';
 /** Twenty signature silhouettes share geometry across thirty stable distant landmark sites. */
 export class CatalogSkyline {
   readonly group=new THREE.Group();
-  private templates=new Map<number,THREE.InstancedMesh[]>();
+  private templates=new Map<number,ViewBatch[]>();
   private transform=new THREE.Object3D();
   private counts=new Map<number,number>();
   constructor(material:THREE.Material) {
@@ -19,9 +20,9 @@ export class CatalogSkyline {
     for(let id=81;id<=100;id++) {
       const a=buildingAsset(id),batch=new UrbanBatch();
       buildCatalogSilhouette(batch,proxy,{id:`far:${id}`,assetId:id,x:0,s:0,width:a.plotWidth,depth:a.plotDepth,height:a.height,side:1,row:2,style:'curtain',seed:id,floors:a.floors,sign:0});
-      const source=batch.build(),meshes:THREE.InstancedMesh[]=[];
+      const source=batch.build(),meshes:ViewBatch[]=[];
       for(const mesh of source.children as THREE.Mesh[]) {
-        const instances=new THREE.InstancedMesh(mesh.geometry,mesh.material,2);instances.count=0;instances.castShadow=false;
+        const instances=new ViewBatch(mesh.geometry,mesh.material as THREE.Material,2);instances.activeCount=0;instances.castShadow=false;
         instances.name=`catalog-far-${id}`;this.group.add(instances);meshes.push(instances);
       }
       this.templates.set(id,meshes);
@@ -29,6 +30,7 @@ export class CatalogSkyline {
   }
   update(seed:string,block:number,origin:number):void {
     this.counts.clear();
+    for(const meshes of this.templates.values())for(const mesh of meshes)mesh.activeCount=0;
     // Multiplication by seven walks all twenty identities, while the seeded offset varies districts.
     const offset=hashSeed(`${seed}:landmark-catalog`)%20;
     for(let district=block-4;district<=block+10;district++)for(const side of [-1,1]) {
@@ -36,11 +38,11 @@ export class CatalogSkyline {
       const r=new Random(hashSeed(`${seed}:landmark-site:${index}`)),count=this.counts.get(id)??0;
       this.transform.position.set(side*r.range(520,540),0,sceneZ(district*360+180,origin));
       this.transform.scale.set(1,1,1);this.transform.rotation.set(0,0,0);this.transform.updateMatrix();
-      for(const mesh of this.templates.get(id)!)mesh.setMatrixAt(count,this.transform.matrix);
+      for(const mesh of this.templates.get(id)!)mesh.place(this.transform.matrix);
       this.counts.set(id,count+1);
     }
     for(const [id,meshes]of this.templates)for(const mesh of meshes) {
-      mesh.count=this.counts.get(id)??0;mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();
+      mesh.activeCount=this.counts.get(id)??0;mesh.computeBoundingSphere();
     }
   }
   get count():number{return [...this.counts.values()].reduce((a,b)=>a+b,0);}

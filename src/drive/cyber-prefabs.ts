@@ -1,3 +1,4 @@
+import { automotiveFinish } from './automotive-materials';
 import * as THREE from 'three';
 import { mergeGeometries,mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CYBER_VEHICLES,type CyberModel,type CyberVehicleSpec } from './cyber-vehicles';
@@ -15,11 +16,12 @@ function material(role:Role,s:CyberVehicleSpec,side=''):THREE.MeshStandardMateri
   const m=role==='paint'?new THREE.MeshPhysicalMaterial({...settings,clearcoat:1,clearcoatRoughness:.16}):new THREE.MeshStandardMaterial(settings);
   m.name=`cyber-${role}-${side}`;m.userData={vehicleRole:role,vehicleSide:side,cyber:true};
   if(['head','brake','turn','reverse','red','blue','amber','accent','interior'].includes(role)) {
-    m.emissive.set(colors[role]);m.emissiveIntensity=role==='head'?VEHICLE_LAMPS.head:role==='brake'?VEHICLE_LAMPS.tail:role==='accent'?.65:role==='amber'?.55:role==='interior'?.3:0;
+    m.emissive.set(colors[role]);m.emissiveIntensity=role==='head'?VEHICLE_LAMPS.head:role==='brake'?VEHICLE_LAMPS.tail:role==='accent'?2.6:role==='amber'?.55:role==='interior'?.3:0;
   }
   // Smoked exterior glass stays opaque in traffic. The player rig uses transparent glazing.
   if(role==='glass'){m.metalness=.65;m.roughness=.12;if(s.id==='orbit'){m.transparent=true;m.opacity=.35;m.depthWrite=false;m.side=THREE.DoubleSide;}}
   if(role==='lens'){m.metalness=.05;m.roughness=.07;m.transparent=true;m.opacity=.12;m.depthWrite=false;}
+  automotiveFinish(m,role);
   library.set(key,m);return m;
 }
 class Parts {

@@ -1,3 +1,4 @@
+import { Missiles } from './missiles';
 import { COLLISION_PROFILES } from './collision-profiles';
 import { VEHICLE_CATALOG } from './vehicle-catalog';
 import { CYBER_VEHICLES,chooseCivilian,cyberHull,type CyberModel } from './cyber-vehicles';
@@ -22,6 +23,7 @@ const masses = { ...Object.fromEntries(Object.entries(VEHICLE_CATALOG).map(([kin
 const pursuitSpeed=Math.max(...Object.values(CYBER_VEHICLES).filter(s=>s.emergency==='police').map(s=>s.speed));
 export class Traffic {
   agents: Agent[] = [];
+  readonly missiles=new Missiles();
   level = 0; capture = 0; nearMisses = 0; collisions = 0; pressure = 0; joins = 0;
   private random: Random; private serial = 0;
   private contacts = new Map<string, number>();
@@ -33,7 +35,7 @@ export class Traffic {
   private refusedRoutes = new Map<number, number>();
   constructor(seed: string, readonly density: Density = 'normal') { this.random = new Random(hashSeed(seed)); }
   reset(): void {
-    this.agents = []; this.level = 0; this.capture = 0; this.nearMisses = 0; this.collisions = 0; this.pressure = 0; this.joins = 0; this.contacts.clear(); this.scoreContacts.clear(); this.ramCooldown.clear(); this.closePasses.clear(); this.passing.clear(); this.policeVehicles.clear(); this.refusedRoutes.clear();
+    this.missiles.reset();this.agents = []; this.level = 0; this.capture = 0; this.nearMisses = 0; this.collisions = 0; this.pressure = 0; this.joins = 0; this.contacts.clear(); this.scoreContacts.clear(); this.ramCooldown.clear(); this.closePasses.clear(); this.passing.clear(); this.policeVehicles.clear(); this.refusedRoutes.clear();
     for (let i = 0; i < capacities[this.density]; i++) this.spawn(0, i, true);
   }
   private spawn(playerS: number, index: number, initial = false): void {
@@ -57,8 +59,8 @@ export class Traffic {
     a.active = true; a.state = 'closing'; a.cooldown = 0; this.joins++; return true;
   }
   get activePolice(): Agent[] { return this.agents.filter(a => a.kind === 'police' && a.active); }
-  /** Fire a directional pulse at the nearest car in a broad lane-sized cone. */
-  firePulse(player:Vehicle,direction:1|-1): {status:'hit'|'empty'|'recharging'; target?:Agent} {
+  /** Lock the nearest target and launch; damage is deferred until a projectile collision. */
+  fireMissile(player:Vehicle,direction:1|-1): {status:'fired'|'empty'|'recharging'; target?:Agent} {
     if(player.pulseCooldown>0)return {status:'recharging'};
     const sin=Math.sin(player.yaw),cos=Math.cos(player.yaw);
     const candidates=this.agents.map(agent=>{
@@ -66,12 +68,11 @@ export class Traffic {
       return {agent,forward:direction*(ds*cos+dx*sin),side:Math.abs(dx*cos-ds*sin)};
     }).filter(item=>item.forward>2&&item.forward<100&&item.side<15).sort((a,b)=>a.forward-b.forward);
     const target=candidates[0]?.agent;if(!target)return {status:'empty'};
-    this.agents=this.agents.filter(a=>a!==target);
-    this.policeVehicles.delete(target.id);this.closePasses.delete(target.id);this.scoreContacts.delete(target.id);
-    this.ramCooldown.delete(target.id);this.refusedRoutes.delete(target.id);this.passing.delete(target.id);
-    this.spawn(player.s,target.id);player.pulseCooldown=5;
-    return {status:'hit',target};
+    if(!this.missiles.launch(player,target.id,direction))return {status:'recharging'};
+    player.pulseCooldown=5;
+    return {status:'fired',target};
   }
+
   laneSafe(agent: Agent, lane: number): boolean {
     return !this.agents.some(a => a !== agent && a.direction === agent.direction &&
       Math.abs(a.x - (agent.direction === 1 ? LANES : ONCOMING)[lane]) < 2.9 &&
@@ -97,8 +98,9 @@ export class Traffic {
     if (a.s < route.exit) { a.targetX = LANES[3]; return Math.min(speed, 30); }
     const sample = road.sampleDetour(a.s)!;
     const preview = road.sampleDetour(Math.min(route.rejoin, a.s + Math.max(10, a.speed * .65)))!;
-    a.targetX = preview.x;
-    let limit = sample.speedLimit;
+    a.targetX = a.kind==='police' ? preview.x : sample.x;
+    const corner=road.sampleDetour(Math.min(route.rejoin,a.s+Math.max(22,a.speed*1.2)))!;
+    let limit = Math.min(sample.speedLimit,preview.speedLimit,corner.speedLimit)*sample.tangentS;
     const approachingReturn = a.s > route.mergeStart - 80;
     if (approachingReturn) {
       const mergingTraffic = this.agents.some(b => b !== a && b.direction === 1 && b.route !== 'detour' &&
@@ -139,7 +141,7 @@ export class Traffic {
     else controls.throttle = clamp((acceleration * tune.mass + resistance) / (tune.engineForce * Math.max(.22, 1 - speed / tune.driveFalloffSpeed) * (1 - vehicle.damage * tune.damagePowerLoss)), 0, 1);
     return controls;
   }
-  step(dt: number, player: Vehicle, elapsed: number): { hit: boolean; near: boolean; boost: boolean; touching: boolean; contacts: Contact[]; scoreHits: Contact[]; explosions:{id:number;x:number;s:number}[]; joined: number } {
+  step(dt: number, player: Vehicle, elapsed: number): { hit: boolean; near: boolean; boost: boolean; touching: boolean; contacts: Contact[]; scoreHits: Contact[]; explosions:{id:number;x:number;s:number;missile?:boolean}[]; joined: number } {
     const beforeJoins = this.joins;
     let hit = false, near = false, boost = false;
     for (const a of this.agents) {
@@ -214,7 +216,10 @@ export class Traffic {
       else {
         const spec=a.model&&CYBER_VEHICLES[a.model],agility=spec?spec.agility:1;
         a.speed += clamp(targetSpeed * (1 - a.damage * .003) - a.speed, -9 * dt, (spec?spec.acceleration:3) * dt);
-        a.lateral = damp(a.lateral, clamp((a.targetX - a.x) * .9, -2.2*agility, 2.2*agility), a.impact > 0 ? .5 : 2*agility, dt);
+        const routeSample=a.route==='detour'?road.sampleDetour(a.s):undefined;
+        const lateralTarget=routeSample ? a.speed*routeSample.tangentX/routeSample.tangentS+clamp((a.targetX-a.x)*2,-5,5)
+          : clamp((a.targetX-a.x)*.9,-2.2*agility,2.2*agility);
+        a.lateral = damp(a.lateral,lateralTarget,a.impact>0?.5:routeSample?7:2*agility,dt);
         a.spin = damp(a.spin, 0, 3, dt);
         a.x += a.lateral * dt; a.s += a.speed * a.direction * dt;
         const heading = Math.atan2(a.lateral, a.speed * a.direction);
@@ -245,7 +250,8 @@ export class Traffic {
       if (pass) pass.clearance=Math.min(pass.clearance,sweptClearance(p,b));
     }
     let playerTouched=false, fatal=false;
-    const destroyed=new Set<number>();
+    const missileHits=this.missiles.active.length?this.missiles.step(dt,this.agents.map(a=>({...a,height:a.model?CYBER_VEHICLES[a.model].height:1.6}))):[];
+    const destroyed=new Set<number>(missileHits.map(hit=>hit.id));
     // Cheap conservative bounds reject distant pairs before building rotated hulls.
     // Exact bounds remain authoritative for every possible contact.
     const broad=(body:Body2D)=>{const radius=Math.hypot(body.width,body.length);return {
@@ -329,7 +335,7 @@ export class Traffic {
         } else if (a.s-player.s>30) this.closePasses.delete(a.id);
       }
     });
-    const explosions=this.agents.filter(a=>destroyed.has(a.id)).map(a=>({id:a.id,x:a.x,s:a.s}));
+    const explosions=this.agents.filter(a=>destroyed.has(a.id)).map(a=>({id:a.id,x:a.x,s:a.s,missile:missileHits.some(hit=>hit.id===a.id)}));
     if(explosions.length){
       this.agents=this.agents.filter(a=>!destroyed.has(a.id));
       for(const a of explosions){this.policeVehicles.delete(a.id);this.closePasses.delete(a.id);this.scoreContacts.delete(a.id);this.ramCooldown.delete(a.id);this.refusedRoutes.delete(a.id);this.passing.delete(a.id);this.spawn(player.s,a.id);}

@@ -1,7 +1,7 @@
 import { Random } from '../core/random';
 import { clamp } from './config';
 import { bridgeForChunk, type Skybridge } from './city-infrastructure';
-import { overpassesAt } from './road';
+import { overpassesAt, districtPassagesAt } from './road';
 
 export const RAIN = { windX: 1.1, windZ: .45, fall: 9.5, exposure: .018 };
 export const GLASS = { width: 1.48, height: .80, baseY: .914, baseZ: -.874, upY: .455, upZ: .89 };
@@ -22,7 +22,7 @@ export function rainSheltered(x: number, s: number): boolean {
     const bridge=bridgeShelters.get(id);
     if(bridge && Math.abs(s-bridge.s)<=bridge.depth/2 && x>=bridge.left && x<=bridge.right) return true;
   }
-  return overpassesAt(s).some(p => Math.abs(s - p.s) <= p.length / 2 && Math.abs(x - p.x) <= p.width / 2);
+  return [...overpassesAt(s),...districtPassagesAt(s)].some(p => Math.abs(s - p.s) <= p.length / 2 && Math.abs(x - p.x) <= p.width / 2);
 }
 /** Camera-centred storage, world-space motion. Origin rebasing never changes rainfall velocity. */
 export class RainField {

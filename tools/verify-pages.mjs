@@ -19,11 +19,15 @@ async function rejectLFSPointers(directory) {
     else if (entry.isFile() && (await stat(path)).size <= 1024) {
       const content = await readFile(path, 'utf8');
       assert(!content.startsWith('version https://git-lfs.github.com/spec/v1'),
-        `Unresolved Git LFS pointer in Pages artifact: ${path.slice(root.length + 1)}. Run git lfs pull; CI checkout must set lfs: true.`);
+        `Unresolved Git LFS pointer in Pages artifact: ${path.slice(root.length + 1).split(sep).join('/')}. Run git lfs pull; CI checkout must set lfs: true.`);
     }
   }
 }
 await rejectLFSPointers(root);
+for (const entry of await readdir(root)) {
+  assert(!/cyberpunk.*(source|threejs)|^blender$|^src$/i.test(entry), `Reference source checkout leaked into Pages artifact: ${entry}`);
+}
+
 async function fileAt(path) {
   const file = resolve(root, path);
   assert(file.startsWith(root + sep), `Asset escapes dist: ${path}`);

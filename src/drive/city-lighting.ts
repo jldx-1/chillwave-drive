@@ -4,7 +4,7 @@ import { catalogPlan } from './catalog-architecture';
 import { catalogEntryHeight,catalogFrontage } from './catalog-frontage';
 import { roadLamp } from './city-infrastructure';
 import type { Quality } from './config';
-import { sceneZ } from './road';
+import { sceneZ, road } from './road';
 interface Source { key:string;x:number;y:number;s:number;category:number;color:string;power:number }
 interface Slot {light:THREE.PointLight;category:number;owner?:Source;pending?:Source;fade:number}
 /** Six bounded real lights; fixed fixture geometry and static reflection spill fill the distance. */
@@ -19,7 +19,7 @@ export class CityLighting {
       this.group.add(light);this.slots.push({light,category:i<2?0:i<4?1:2,fade:0});
     }
   }
-  update(seed:string,s:number,origin:number,dt:number,quality:Quality):void {
+  update(seed:string,s:number,origin:number,dt:number,quality:Quality,x=0):void {
     const chunk=Math.floor(s/120),key=`${seed}:${chunk}`;
     if(key!==this.key) {
       this.key=key;this.sources=[];
@@ -28,9 +28,13 @@ export class CityLighting {
           const lamp=roadLamp(id*120+ds,side);
           this.sources.push({...lamp,key:`road:${id}:${side}:${ds}`,category:side<0?0:1,color:'#ffbd7b',power:340});
         }
+        for(const ds of [46,94]) {
+          const at=id*120+ds,p=road.sampleDetour(at);
+          if(p?.phase==='service')for(const side of [-1,1])this.sources.push({key:`district:${id}:${side}:${ds}`,x:p.x+side*p.tangentS*5.7,y:6.63,s:at-side*p.tangentX*5.7,category:side<0?0:1,color:'#ffd6ac',power:260});
+        }
         for(const p of cityChunk(seed,id).parcels) if(p.row===0 && p.style!=='warehouse' && p.style!=='fuel') {
           const plan=p.assetId?catalogPlan(p.assetId):undefined;
-          const width=plan?.asset.id===1?58:plan?.asset.width??p.width;
+          const width=p.width;
           const bays=plan?catalogFrontage(plan.asset.id,plan.asset.depth):[];
           const lobby=bays.find(b=>b.use===plan?.asset.ground)??bays[Math.floor(bays.length/2)];
           this.sources.push({key:`shop:${p.id}`,category:2,x:p.x-p.side*(width/2-2.1),y:plan?catalogEntryHeight(plan.asset.ground,plan.podium)-.16:3.7,s:p.s-(lobby?.center??0),color:'#ffe0b3',power:170});
@@ -41,9 +45,9 @@ export class CityLighting {
       const slot=this.slots[i];let candidate:Source|undefined,nearest=Infinity;
       for(const source of this.sources) {
         if(source.category!==slot.category || this.slots.some(other=>other!==slot&&(other.owner?.key===source.key||other.pending?.key===source.key))) continue;
-        const distance=Math.abs(source.s-s)+(source.category===2&&source.s<s?15:0);if(distance<nearest){nearest=distance;candidate=source;}
+        const distance=Math.hypot(source.s-s,source.x-x)+(source.category===2&&source.s<s?15:0);if(distance<nearest){nearest=distance;candidate=source;}
       }
-      const oldDistance=slot.owner?Math.abs(slot.owner.s-s):Infinity;
+      const oldDistance=slot.owner?Math.hypot(slot.owner.s-s,slot.owner.x-x):Infinity;
       if(!slot.owner && candidate) {slot.owner=candidate;slot.fade=0;}
       else if(candidate&&candidate.key!==slot.owner?.key&&(oldDistance>62||oldDistance>nearest+16)) slot.pending=candidate;
       const enabled=quality!=='low'||i===0||i===2||i===4;

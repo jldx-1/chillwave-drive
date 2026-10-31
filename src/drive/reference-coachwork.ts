@@ -57,9 +57,9 @@ function shell(p:VehicleParts,d:Design,lod:number):void {
   // Insert exact arch/sill intersection; no triangles bridge across the tire opening.
   for(const a of p.spec.axles)for(const sign of [-1,1]){const z=a+sign*Math.sqrt(r*r-(d.sill-cy)**2);if(z>from&&z<to)zs.push(z);}
   zs.sort((a,b)=>a-b);for(let i=zs.length-1;i>0;i--)if(zs[i]-zs[i-1]<1e-5)zs.splice(i,1);
-  const ring=[[-1,0],[-1,.31],[-.985,.78],[-.92,1],[-.73,1],[-.43,1],[0,1],[.43,1],[.73,1],[.92,1],[.985,.78],[1,.31],[1,0]],vertices:number[]=[],idx:number[]=[];
+  const ring=[[-1,0],[-1,.31],[-.997,.55],[-.985,.78],[-.92,1],[-.73,1],[-.43,1],[0,1],[.43,1],[.73,1],[.92,1],[.985,.78],[.997,.55],[1,.31],[1,0]],vertices:number[]=[],idx:number[]=[];
   for(const z of zs){const w=widthAt(p,d,z),deck=deckAt(p,d,z),bottom=archHeight(p,d,z),top=Math.max(deck+.025,bottom+.055);
-    for(const [x,t]of ring){const side=Math.abs(x),roof=side>.88?top:THREE.MathUtils.lerp(deck+.032,top,Math.max(0,(side-.43)/.49));const y=side>.98?THREE.MathUtils.lerp(bottom,roof,t):roof;vertices.push(x*w,y,z);}
+    for(const [x,t]of ring){const side=Math.abs(x),roof=side>.88?top:THREE.MathUtils.lerp(deck+.032+.022*(1-side*side),top,Math.max(0,(side-.43)/.49));const y=side>.98?THREE.MathUtils.lerp(bottom,roof,t):roof;vertices.push(x*w,y,z);}
   }
   for(let j=0;j<zs.length-1;j++)for(let k=0;k<ring.length-1;k++){if(p.spec.id==='nova'&&zs[j]>1.01&&k>=4&&k<8)continue;const a=j*ring.length+k,b=a+ring.length;idx.push(a,b,a+1,a+1,b,b+1);}
   p.add('paint',geometry(vertices,idx));

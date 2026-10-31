@@ -7,7 +7,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:4173',
     viewport: { width: 1280, height: 800 },
-    launchOptions: { args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--disable-dev-shm-usage'] },
+    // Use the native Windows GPU; software ANGLE can reset during the generator's shader warmup.
+    launchOptions: { args: process.platform === 'win32'
+      ? ['--use-angle=d3d11', '--disable-gpu-watchdog']
+      : ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--disable-dev-shm-usage', '--disable-gpu-watchdog'] },
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },

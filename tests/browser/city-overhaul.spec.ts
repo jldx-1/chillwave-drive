@@ -11,12 +11,14 @@ test('modeled city, warm fixtures and moving aerial lanes remain functional from
   await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/?qa&seed=SUNSET');await startDrive(page);await page.clock.runFor(51);
   await expect(page.locator('.speed-ring small')).toHaveText('MPH');
   const state=await page.evaluate(()=>window.__drive.inspect());
-  console.log('city inspection',JSON.stringify({catalog:state.catalog,visibleAir:state.aerialTraffic.visible,lights:state.cityLighting,errors}));
+  console.log('city inspection',JSON.stringify({procedural:state.proceduralBuildings,catalog:state.catalog,visibleAir:state.aerialTraffic.visible,lights:state.cityLighting,errors}));
   for(let i=0;i<8;i++)await page.clock.fastForward(100);
   await page.screenshot({path:'test-results/city-overhaul-chase.png'});
   expect(state.catalog.available).toBe(100);expect(state.catalog.activeAssets.length).toBeGreaterThan(40);
   expect(state.catalog.activeAssets).toContain(11);expect(state.catalog.activeAssets).toContain(51);
-  expect(state.catalog.nearGroups).toBeGreaterThan(0);expect(state.catalog.nearGroups).toBeLessThanOrEqual(state.catalog.midGroups);
+  expect(state.proceduralBuildings.templates).toBe(6);
+  expect(state.proceduralBuildings.activeBuildings).toBe(state.cityParcels);
+  for(const count of Object.values(state.proceduralBuildings.families))expect(count).toBeGreaterThan(0);
   expect(state.aerialTraffic.visible).toBeGreaterThanOrEqual(2);expect(state.aerialTraffic.count).toBe(15);
   expect(state.cityLighting.physicalLights).toBe(6);expect(state.cityLighting.activeLights).toBeGreaterThanOrEqual(3);
   await page.addStyleTag({content:'#hud,.header,#toast,.screen-shade{visibility:hidden!important}'});
@@ -31,5 +33,27 @@ test('modeled city, warm fixtures and moving aerial lanes remain functional from
   expect(driven.resolution).toBe(state.resolution);expect(driven.aerialTraffic.poses[0].s).not.toBe(state.aerialTraffic.poses[0].s);
   await page.screenshot({path:'test-results/city-overhaul-driving.png'});
   await page.keyboard.press('c');await page.clock.runFor(17);await page.screenshot({path:'test-results/city-overhaul-cockpit.png'});
+  expect(errors).toEqual([]);
+});
+
+test('procedural city runs from Pages without the reference checkout', async ({ page, request }) => {
+  test.setTimeout(120000);
+  const base = 'http://127.0.0.1:4174/chillwave-drive/';
+  const errors: string[] = [], resources: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('request', r => resources.push(r.url()));
+  await page.setViewportSize({ width: 800, height: 500 });
+  await page.addInitScript(() => localStorage.setItem('chillwave-drive:settings:v1', JSON.stringify({ quality: 'low', density: 'low', musicEnabled: false })));
+  await page.clock.install(); await page.clock.pauseAt(new Date());
+  await page.goto(base + '?qa&seed=PROCEDURAL'); await startDrive(page);
+  await page.clock.runFor(17);
+  const state = await page.evaluate(() => window.__drive.inspect());
+  expect(state.proceduralBuildings.templates).toBe(6);
+  expect(state.proceduralBuildings.activeBuildings).toBe(state.cityParcels);
+  expect(resources.some(url => /CyberPunkProceduralBuildingsThreeJS|cyberpunk-buildings-source|\/tex\//i.test(url))).toBe(false);
+  expect((await request.get(base + 'CyberPunkProceduralBuildingsThreeJS/src/main.tsx')).status()).toBe(404);
+  const notice = await request.get(base + 'licenses/cyberpunk-buildings-MIT.txt');
+  expect(notice.status()).toBe(200); expect(await notice.text()).toContain('Copyright (c) 2026 mohamedachrefelouafi');
   expect(errors).toEqual([]);
 });

@@ -29,7 +29,7 @@ export class DriveCamera {
       this.focus.set(pose.x + sin * (rear ? -18 : 20), 1.05, z - cos * (rear ? -18 : 20));
       this.position.y+=pose.height??0;this.focus.y+=pose.height??0;
       // Keep the chase eye inside the traversable road envelope.
-      this.position.x = player.airborne && player.collisionHeight>1.3 ? road.constrainAirborne(this.position.x,pose.s-distance) : road.constrainPlayer(this.position.x, pose.s - distance, pose.x, player.simulationTime, player.medianHeld);
+      this.position.x = player.airborne && player.collisionHeight>1.3 ? road.constrainAirborne(this.position.x,pose.s-Math.cos(followYaw)*distance) : road.constrainPlayer(this.position.x, pose.s - Math.cos(followYaw)*distance, pose.x, player.simulationTime, player.medianHeld);
       if (!this.initialized || rear) this.camera.position.copy(this.position);
       else this.camera.position.lerp(this.position, 1 - Math.exp(-dt * 11));
     }

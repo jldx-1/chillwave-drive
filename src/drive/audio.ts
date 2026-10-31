@@ -66,6 +66,15 @@ export class DriveAudio {
     fade(this.master!.gain, 0, this.context.currentTime + tail, .015);
     this.suspend = setTimeout(() => { if (this.paused) void this.context?.suspend(); }, 100 + tail * 1000);
   }
+  missileLaunch():void {
+    const ctx=this.context;if(!ctx||this.paused||!this.impactNoise)return;
+    const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+    source.buffer=this.impactNoise;filter.type='bandpass';filter.Q.value=.7;
+    filter.frequency.setValueAtTime(500,ctx.currentTime);filter.frequency.exponentialRampToValueAtTime(2400,ctx.currentTime+.18);
+    gain.gain.setValueAtTime(.001,ctx.currentTime);gain.gain.linearRampToValueAtTime(.3,ctx.currentTime+.025);gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.4);
+    source.connect(filter);filter.connect(gain);gain.connect(this.effects!);source.start();source.stop(ctx.currentTime+.42);
+    source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};
+  }
   impact(severity = 15): void {
     const ctx = this.context; if (!ctx || this.paused) return;
     if(this.impactNoise){const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();source.buffer=this.impactNoise;filter.type='lowpass';filter.frequency.value=700+Math.min(2500,severity*90);source.connect(filter);filter.connect(gain);gain.connect(this.effects!);gain.gain.setValueAtTime(Math.min(.5,.08+severity*.012),ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.28);source.start();source.stop(ctx.currentTime+.3);source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};}

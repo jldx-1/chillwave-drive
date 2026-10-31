@@ -47,8 +47,8 @@ export class CarVisual {
   private pitch = 0;
   private owned: THREE.BufferGeometry[] = [];
   private ownedMaterials: THREE.Material[] = [];
-  constructor(private color = '#394d71', readonly detailed = false, readonly kind: Agent['kind'] = 'sport',readonly model?:CyberModel) {
-    this.group.add(this.body);
+  constructor(private color = '#394d71', readonly detailed = false, readonly kind: Agent['kind'] = 'sport',readonly model?:CyberModel, initialDetail:VehicleLOD=0) {
+    this.detail=initialDetail; this.group.add(this.body);
     if (!contactMaterial) {
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
       const ctx = canvas.getContext('2d')!, gradient = ctx.createRadialGradient(32, 32, 8, 32, 32, 32);
@@ -70,7 +70,7 @@ export class CarVisual {
         this.sideMirrors.push(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: '#b9cdd9' })));
       }
       this.updateDashboard(0, 1); this.ready = this.loadPlayer();
-    } else this.ready = this.loadFleet(0);
+    } else this.ready = this.loadFleet(initialDetail);
   }
   private async loadPlayer(): Promise<void> {
     try {

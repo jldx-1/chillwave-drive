@@ -1,3 +1,5 @@
+import { ViewBatch } from './view-batch';
+import { automotiveFinish } from './automotive-materials';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VEHICLE_CATALOG, type FleetKind } from './vehicle-catalog';
@@ -64,6 +66,7 @@ export function rigFleetCar(source: THREE.Group, kind: FleetIdentity, color: str
         if(original instanceof THREE.MeshStandardMaterial&&original.userData.cyber)m.emissive.copy(original.emissive);
         m.emissiveIntensity = lamp === 'head' ? VEHICLE_LAMPS.head : lamp === 'brake' ? VEHICLE_LAMPS.tail : lamp==='amber'?.55:0; m.roughness = .18;
       }
+      delete m.userData.automotiveFinish; automotiveFinish(m,role);
       materials.set(original, m); unique.push(m); return m;
     };
     o.material = Array.isArray(o.material) ? o.material.map(material) : material(o.material);
@@ -108,7 +111,7 @@ export function animateFleetRig(rig: FleetRig, dt: number, time: number, speed: 
 }
 export function disposeFleetRig(rig: FleetRig): void { rig.group.removeFromParent(); rig.unique.forEach(m => m.dispose()); }
 
-interface Proxy { group: THREE.Group; meshes: THREE.InstancedMesh[]; count: number }
+interface Proxy { group: THREE.Group; meshes: ViewBatch[]; count: number }
 /** Far instances come from each real vehicle's LOD silhouette, including its wheels. */
 export class FleetDistant {
   readonly group = new THREE.Group();
@@ -131,23 +134,23 @@ export class FleetDistant {
         const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld);
         const list = buckets.get(o.material) ?? []; list.push(g); buckets.set(o.material, list);
       });
-      const group = new THREE.Group(), meshes: THREE.InstancedMesh[] = [];
+      const group = new THREE.Group(), meshes: ViewBatch[] = [];
       for (const [material, parts] of buckets) {
         const all = parts.map(g => g.index ? g.toNonIndexed() : g), merged = mergeGeometries(all);
         new Set([...parts, ...all]).forEach(g => g.dispose());
         if (!merged) throw new Error('Incompatible ' + kind + ' proxy attributes');
-        const mesh = new THREE.InstancedMesh(merged, material, 100); mesh.count = 0; mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.frustumCulled = false; mesh.receiveShadow = true; group.add(mesh); meshes.push(mesh);
+        const mesh = new ViewBatch(merged, material, 100); mesh.activeCount = 0; mesh.frustumCulled = false; mesh.receiveShadow = true; group.add(mesh); meshes.push(mesh);
       }
       this.proxies.set(kind, { group, meshes, count: 0 }); this.group.add(group);
     })).then(() => {});
   }
-  begin(): void { for (const p of this.proxies.values()) p.count = 0; }
+  begin(): void { for (const p of this.proxies.values()) { p.count = 0; for(const mesh of p.meshes)mesh.activeCount=0; } }
   place(kind: FleetKind, x: number, z: number, yaw: number,model?:CyberModel): void {
     const p = this.proxies.get(cyberModel(kind,model)); if (!p || p.count >= 100) return;
     this.position.set(x, 0, z); this.rotation.setFromAxisAngle(this.up, -yaw); this.matrix.compose(this.position, this.rotation, this.scale);
-    for (const mesh of p.meshes) mesh.setMatrixAt(p.count, this.matrix); p.count++;
+    for (const mesh of p.meshes) mesh.place(this.matrix); p.count++;
   }
-  end(): void { for (const p of this.proxies.values()) for (const mesh of p.meshes) { mesh.count = p.count; mesh.instanceMatrix.needsUpdate = true; } }
+  end(): void { for (const p of this.proxies.values()) for (const mesh of p.meshes) { mesh.activeCount = p.count; mesh.computeBoundingSphere(); } }
   get count(): number { return Array.from(this.proxies.values()).reduce((n, p) => n + p.count, 0); }
   dispose(): void { this.retired = true; for (const p of this.proxies.values()) for (const mesh of p.meshes) { mesh.geometry.dispose(); mesh.dispose(); } this.group.removeFromParent(); this.proxies.clear(); }
 }
