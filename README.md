@@ -19,7 +19,7 @@ is ignored by Git and excluded from the Pages artifact; no external generator se
 repository is required at runtime. The [license notice](public/licenses/cyberpunk-buildings-MIT.txt)
 is included in the published assets. Procedural surfaces are used without the reference demo's PBR scans.
 
-The city batches neon colors/flicker into vertex attributes and static signs into padded
+The city batches surface parameters and neon colors into vertex attributes and static signs into padded
 texture atlases. Small fixtures use preset-specific distance detail with hysteresis; building
 shells, windows and signs remain visible through the city mist. Tube/porthole tessellation
 is tuned for the driving camera. Loading waits for asynchronous shader warmup before drawing
@@ -28,17 +28,26 @@ specs and instance buffers are reused across origin-only changes.
 
 Run `npx playwright test tests/browser/city-performance.spec.ts` to report startup time,
 shader/capture timings, frame-time percentiles, complete per-frame draw/triangle counts,
-and geometry/texture allocations for desktop Medium and phone-sized Low viewports.
+and geometry/texture allocations for 1440p Ultra/High, desktop Medium and phone-sized Low.
+The Ultra driving test exercises actual animation frames and chunk boundaries on the native GPU.
 
-Camera-dependent rendering uses Three.js `BatchedMesh` for individual building parts,
+Camera-dependent rendering uses native Three.js `InstancedMesh` for individual building parts,
 skyline objects, distant vehicles and aerial traffic. Every main, mirror, reflected and
 shadow camera builds its own culled draw list. Detailed traffic rigs are loaded for a
 padded set of active views, use projected-size LOD, and retire after two seconds offscreen;
 shared coarse models cover rapid camera changes. This is the Three.js visibility/LOD
 implementation of the requested Nanite-style behavior. Geometry templates remain cached.
-The renderer uses two small matrix/command data textures per batch in addition to image
-textures, so texture-object counts include these buffers. GPU geometry submission and
-long-distance allocation stability are checked separately.
+Each camera retains its own instance matrices and reuses unchanged GPU buffers. Streetscape
+chunks use a reserved `BatchedMesh` ring to combine unique geometry without rebuilding it.
+Future streetscape chunks are generated in a worker and transferred without copying vertex buffers;
+the synchronous builder remains available as a fallback. High/Ultra use GTAO with the resolved
+scene depth, avoiding a second full-city normal/depth render. Display resolution, preset detail,
+reflection targets, shadows, bloom and multisample antialiasing are preserved.
+Asynchronous GPU timing and CPU frame/update percentiles are available in QA diagnostics.
+On the local RTX 4070 Ti (D3D11), the 2560×1440 Ultra driving benchmark with normal traffic
+recorded a 16.7 ms 95th-percentile frame interval, with 0.8% of frames over 25 ms.
+This measures 660 real animation frames through streamed chunk boundaries, rather than
+synthetic simulation advances; results depend on the GPU, browser and scene.
 
 Vehicles use clear-coated metallic paint, filtered microflake roughness, reflective tinted
 glass, brighter functional LEDs and alloy/rotor/rubber finishes. Player damage and rain
@@ -111,7 +120,7 @@ Runtime vehicles use the original [cyber fleet](docs/CYBER_FLEET.md), cached pro
 
 WebGPU was investigated against the [official Three.js migration guide](https://threejs.org/manual/pages/webgpurenderer). Its material/postprocessing API requires porting this code's GLSL reflection and weather shaders to TSL; a renderer switch by itself would not improve those assets or physics. This build keeps **WebGL2**, with configurable SSAO/bloom/shadows/reflections and fixed preset resolution. The renderer is not advertised as WebGPU or as matching Forza Horizon. See [UPGRADE_PLAN.md](UPGRADE_PLAN.md).
 
-The fleet library adds about 36 MB across the player and all traffic LODs, with source assets retained for reproducible offline export. Model preparation happens before play; the loading indicator keeps Start disabled until the required assets decode. Higher presets need a capable GPU. A headless Chromium renderer-resource test sweeps 100 km of actual streamed chunks and checks bounded geometry/texture counts; it is not a human-driven endurance session or a measurement of process RAM. Human handling/listening judgment, calibrated hardware FPS, Safari/Firefox verification and the actual GitHub-hosted deployment still require separate checks.
+The fleet library adds about 36 MB across the player and all traffic LODs, with source assets retained for reproducible offline export. Model preparation happens before play; the loading indicator keeps Start disabled until the required assets decode. Higher presets need a capable GPU. A headless Chromium renderer-resource test sweeps 100 km of actual streamed chunks and checks bounded geometry/texture counts; it is not a human-driven endurance session or a measurement of process RAM. Human handling/listening judgment, longer driving sessions, other GPU/browser combinations and the actual GitHub-hosted deployment still require separate checks.
 
 ## Checks
 

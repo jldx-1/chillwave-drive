@@ -23,6 +23,8 @@ function attributeMaterial(source: THREE.ShaderMaterial, fields: Record<string, 
 export class CityMaterialBatches {
   private neon?: THREE.ShaderMaterial;
   private sign?: THREE.ShaderMaterial;
+  private surfaces=new Map<string,THREE.MeshStandardMaterial>();
+  private basics=new Map<string,THREE.MeshBasicMaterial>();
   private regions = new Map<THREE.Texture, {x:number;y:number;size:number}>();
   readonly atlasPixels: number;
   constructor(source: THREE.Object3D) {
@@ -52,6 +54,44 @@ export class CityMaterialBatches {
     this.atlasPixels = size * size;
   }
   material(source: THREE.Material, g: THREE.BufferGeometry): THREE.Material {
+    if(source instanceof THREE.MeshStandardMaterial && source.userData.citySurface) {
+      const options=source.userData.citySurface;
+      const key=[options.pattern,source.side,source.envMapIntensity].join(':');
+      constantAttribute(g,'aCityColor',source.color.toArray());
+      constantAttribute(g,'aCityP0',[source.roughness,source.metalness,options.grime,options.bump]);
+      constantAttribute(g,'aCityP1',[options.cell,options.vary]);
+      let material=this.surfaces.get(key);
+      if(!material) {
+        material=source.clone();
+        (material as THREE.MeshStandardMaterial & {defines:Record<string,number>}).defines={PATTERN:options.pattern};
+        const compile=source.onBeforeCompile.bind(source);
+        material.onBeforeCompile=(shader,renderer)=>{
+          compile(shader,renderer);
+          const declarations='flat varying vec3 vCityColor;flat varying vec4 vCityP0;flat varying vec2 vCityP1;\n';
+          shader.vertexShader='attribute vec3 aCityColor;attribute vec4 aCityP0;attribute vec2 aCityP1;\n'+declarations+shader.vertexShader;
+          shader.vertexShader=shader.vertexShader.replace('void main() {','void main() {vCityColor=aCityColor;vCityP0=aCityP0;vCityP1=aCityP1;');
+          shader.fragmentShader=declarations+shader.fragmentShader;
+          for(const [name,value] of Object.entries({uGrime:'vCityP0.z',uBumpS:'vCityP0.w',uCell:'vCityP1.x',uVary:'vCityP1.y'})) {
+            shader.fragmentShader=shader.fragmentShader.replace(`uniform float ${name};`,'').replace(new RegExp('\\b'+name+'\\b','g'),value);
+            delete shader.uniforms[name];
+          }
+          shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.rgb=vCityColor;');
+          // Material chunks are expanded after onBeforeCompile.
+          shader.fragmentShader=shader.fragmentShader.replace('#include <roughnessmap_fragment>',THREE.ShaderChunk.roughnessmap_fragment.replace('roughness;','vCityP0.x;'))
+            .replace('#include <metalnessmap_fragment>',THREE.ShaderChunk.metalnessmap_fragment.replace('metalness;','vCityP0.y;'));
+        };
+        material.customProgramCacheKey=()=>source.customProgramCacheKey()+'-attributes';
+        this.surfaces.set(key,material);
+      }
+      return material;
+    }
+    if(source instanceof THREE.MeshBasicMaterial && !source.map) {
+      const key=[source.side,source.transparent,source.opacity,source.depthWrite,source.toneMapped].join(':');
+      constantAttribute(g,'color',source.color.toArray());
+      let material=this.basics.get(key);
+      if(!material){material=source.clone();material.color.set(0xffffff);material.vertexColors=true;this.basics.set(key,material);}
+      return material;
+    }
     if (!(source instanceof THREE.ShaderMaterial)) return source;
     const u = source.uniforms;
     if (u.uChase) {

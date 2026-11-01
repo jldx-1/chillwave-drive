@@ -229,6 +229,7 @@ function surface(o: SurfaceOpts): MeshStandardMaterial {
     envMapIntensity: o.envI ?? 1,
   });
   const pattern = o.pattern ?? PAT.plain;
+  m.userData.citySurface = {grime:o.grime??.6,bump:o.bump??.012,cell:o.scale??1,vary:o.vary??.18,pattern};
   (m as MeshStandardMaterial & { defines: Record<string, number> }).defines = { PATTERN: pattern };
   m.onBeforeCompile = (s: WebGLProgramParametersWithUniforms) => {
     s.uniforms.uWet = shared.uWet;

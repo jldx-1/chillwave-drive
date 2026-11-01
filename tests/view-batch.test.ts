@@ -34,3 +34,16 @@ describe('camera-specific batched visibility',()=>{
     views.rebase(1000);expect(views.contains(0,0,980,1)).toBe(true);expect(views.contains(0,0,1040,1)).toBe(true);
   });
 });
+
+
+it('retains independent camera matrices and avoids uploading unchanged transforms',()=>{
+  const batch=new ViewBatch(new THREE.BoxGeometry(2,2,2),new THREE.MeshStandardMaterial(),8),root=new THREE.Group();root.add(batch);
+  for(const z of [-12,-20,15,250])batch.place(new THREE.Matrix4().makeTranslation(0,0,z));
+  const front=camera(),rear=camera(true);front.userData.viewBatchSlot=0;rear.userData.viewBatchSlot=1;root.updateMatrixWorld(true);
+  ViewBatch.prepare({}as THREE.WebGLRenderer,root,front);const first=batch.instanceMatrix,version=first.version;
+  expect(first.array[14]).toBe(-12);expect(first.array[30]).toBe(-20);
+  ViewBatch.prepare({}as THREE.WebGLRenderer,root,rear);const second=batch.instanceMatrix;expect(second).not.toBe(first);expect(second.array[14]).toBe(15);
+  ViewBatch.prepare({}as THREE.WebGLRenderer,root,front);expect(batch.instanceMatrix).toBe(first);expect(first.version).toBe(version);
+  const matrix=new THREE.Matrix4();batch.getMatrixAt(2,matrix);expect(matrix.elements[14]).toBe(15);expect(batch.matrix.equals(new THREE.Matrix4())).toBe(true);
+  batch.dispose();batch.material.dispose();
+});
