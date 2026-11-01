@@ -7,7 +7,7 @@
  *   rain wetness on up-facing faces;
  * - windows: glass that reflects the environment, with an interior-mapped
  *   room behind it (walls, floor, ceiling lamp, furniture / people
- *   silhouettes, blinds, TV flicker) drawn as emission;
+ *   silhouettes, blinds, TV glow) drawn as emission;
  * - neon: unlit HDR tubes with a rounded core and per-channel flicker.
  *
  * Keys: "concrete", "tileA", ..., "neon:ff2a6d:2" (colour, flicker channel),
@@ -284,6 +284,7 @@ vec3 cpRoomLight(float seed, float style) {
 
 vec3 cpInterior(vec2 uv, vec4 win, vec3 Vw, vec3 Nw) {
   float seed = win.x; float W = win.y; float H = win.z; float style = win.w;
+  vec2 pixelUv = fwidth(uv);
   vec3 h = cpH3(seed * 91.7);
   vec3 h2 = cpH3(seed * 13.3 + 7.0);
   vec3 h3 = cpH3(seed * 3.71 + 2.0);
@@ -368,10 +369,9 @@ vec3 cpInterior(vec2 uv, vec4 win, vec3 Vw, vec3 Nw) {
     col = mix(col, col * 0.06, sil);
   }
 
-  // TV flicker
+  // Steady TV glow: room lighting must not flash as the player drives.
   float tv = step(0.75, h2.z) * step(style, 0.5);
-  float fl = 0.75 + 0.25 * sin(uTime * 11.0 + seed) * sin(uTime * 3.7 + seed * 2.0);
-  vec3 lightC = mix(L, vec3(0.45, 0.6, 1.0) * fl, tv);
+  vec3 lightC = mix(L, vec3(0.45, 0.6, 1.0), tv);
 
   vec3 room = col * lightC * lit;
 
@@ -381,29 +381,36 @@ vec3 cpInterior(vec2 uv, vec4 win, vec3 Vw, vec3 Nw) {
   if (style > 3.5) cover = 0.0;
   float blindsOn = step(1.0 - cover, uv.y) * step(0.55, h.y + 0.2);
   if (style > 1.5 && style < 2.5) blindsOn *= step(0.75, h3.z);
-  float slat = 0.55 + 0.45 * smoothstep(0.2, 0.5, abs(fract(uv.y * H * 14.0) - 0.5));
-  float curtain = 0.6 + 0.4 * sin(uv.x * W * 18.0 + sin(uv.x * 7.0) * 2.0);
+  float slatPhase = uv.y * H * 14.0;
+  float slatDetail = 1.0 - smoothstep(0.25, 1.0, pixelUv.y * H * 14.0);
+  float slat = mix(0.685, 0.55 + 0.45 * smoothstep(0.2, 0.5, abs(fract(slatPhase) - 0.5)), slatDetail);
+  float curtainPhase = uv.x * W * 18.0 + sin(uv.x * 7.0) * 2.0;
+  float curtainDetail = 1.0 - smoothstep(1.0, 3.14159, pixelUv.x * (W * 18.0 + 14.0));
+  float curtain = 0.6 + 0.4 * sin(curtainPhase) * curtainDetail;
   float isCurtain = step(0.5, h2.x);
   vec3 blinds = lightC * (lit * 0.55 + 0.03) * mix(slat, curtain, isCurtain) * mix(vec3(1.0), vec3(1.0, 0.75, 0.6), isCurtain);
   room = mix(room, blinds, blindsOn);
 
   // unlit rooms still catch a little city glow
   room += (1.0 - lit) * col * vec3(0.05, 0.04, 0.08);
+  // Subpixel interiors converge to stable room illumination instead of aliasing furniture and slats.
+  room = mix(room, lightC * (0.16 * lit + 0.008), smoothstep(0.08, 0.35, max(pixelUv.x, pixelUv.y)));
   return room * uRoomBright * (style > 0.5 && style < 1.5 ? 1.15 : 1.0) * (style > 2.5 && style < 3.5 ? 0.35 : 1.0);
 }
 `;
 
 function windowMat(): MeshStandardMaterial {
   const m = new MeshStandardMaterial({ color: 0x050608, roughness: 0.06, metalness: 0.1, envMapIntensity: 1.2 });
+  // Room identity is constant per pane; interpolating a hash seed amplifies rounding into visible noise.
   m.onBeforeCompile = (s: WebGLProgramParametersWithUniforms) => {
     s.uniforms.uTime = shared.uTime;
     s.uniforms.uLit = shared.uLit;
     s.uniforms.uRoomBright = shared.uRoomBright;
     s.vertexShader = s.vertexShader
-      .replace("#include <common>", "#include <common>\n attribute vec4 aWin;\n varying vec4 vWin;\n varying vec2 vWinUv;\n" + VERT_PARS)
+      .replace("#include <common>", "#include <common>\n attribute vec4 aWin;\n flat varying vec4 vWin;\n varying vec2 vWinUv;\n" + VERT_PARS)
       .replace("#include <project_vertex>", "#include <project_vertex>\n vWin = aWin; vWinUv = uv;\n" + VERT_MAIN);
     s.fragmentShader = s.fragmentShader
-      .replace("#include <common>", "#include <common>\n varying vec4 vWin;\n varying vec2 vWinUv;\n varying vec3 vCpWPos;\n varying vec3 vCpWNrm;\n" + GLSL_INTERIOR)
+      .replace("#include <common>", "#include <common>\n flat varying vec4 vWin;\n varying vec2 vWinUv;\n varying vec3 vCpWPos;\n varying vec3 vCpWNrm;\n" + GLSL_INTERIOR)
       .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
         vec3 cpV = normalize((vec4(-vViewPosition, 0.0) * viewMatrix).xyz);
         vec3 cpNw = normalize(vCpWNrm);
@@ -411,7 +418,7 @@ function windowMat(): MeshStandardMaterial {
         if (vWin.w > 3.5) { float r = length(cpUv - 0.5); if (r > 0.5) discard; }
         totalEmissiveRadiance += cpInterior(cpUv, vWin, cpV, cpNw);`);
   };
-  m.customProgramCacheKey = () => "win";
+  m.customProgramCacheKey = () => "win-stable-interior-v2";
   return m;
 }
 

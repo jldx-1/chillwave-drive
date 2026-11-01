@@ -445,7 +445,7 @@ export class DriveScene {
       [this.renderHeight*this.pixelRatio,...(mirror?[this.rearTarget.height]:[]),...(this.reflector.visible?[this.reflector.getRenderTarget().height]:[])]);
   }
   /** QA-only static camera probe: compare the same view before/after streaming and origin boundaries. */
-  previewCity(camera:THREE.PerspectiveCamera,distance:number,rear:boolean,windowDistance=distance,probe?:{occluder?:number;sun?:boolean;district?:boolean}) {
+  previewCity(camera:THREE.PerspectiveCamera,distance:number,rear:boolean,windowDistance=distance,probe?:{occluder?:number;sun?:boolean;district?:boolean;offsetX?:number}) {
     this.stream(windowDistance);
     const street=probe?.district?road.sampleDetour(distance):undefined;
     const x=street?.x??6.5,tx=street?.tangentX??0,ts=street?.tangentS??1;
@@ -458,7 +458,7 @@ export class DriveScene {
       hidden.forEach(o=>o.visible=false);wet.headOn.value=0;wet.roadOrigin.value=this.origin;
       const z=sceneZ(distance,this.origin);
       const direction=rear?-1:1;
-      camera.position.set(x-tx*7.5*direction,3.25,z+ts*7.5*direction);camera.lookAt(x+tx*20*direction,1.05,z-ts*20*direction);
+      camera.position.set(x-tx*7.5*direction+(probe?.offsetX??0),3.25,z+ts*7.5*direction);camera.lookAt(x+tx*20*direction+(probe?.offsetX??0),1.05,z-ts*20*direction);
       camera.fov=59;camera.near=.2;camera.updateProjectionMatrix();camera.updateMatrixWorld();
       this.reflector.position.z=z-650;
       this.atmosphere.setSunsetEnabled(probe?.sun!==false);

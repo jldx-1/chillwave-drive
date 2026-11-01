@@ -18,3 +18,7 @@ is reduced for the driving camera. Small fixtures form additive distance-detail 
 with preset-specific ranges and 24m hysteresis; their shadows are omitted. Surface
 programs share a cache key per pattern, since grime and scale are uniforms. Legacy
 facade textures are created only when requested. Origin-only updates reuse instance buffers.
+
+Window room attributes use flat interpolation so camera movement cannot alter room hashes.
+Blinds and curtains fade to their average below pixel resolution; distant interiors converge
+to steady illumination. Whole-room TV flicker is replaced by a constant cool glow.

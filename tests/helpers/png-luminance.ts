@@ -62,3 +62,13 @@ export function imageDifference(first:Buffer,second:Buffer):number {
   let total=0;for(let i=0;i<a.pixels.length;i++)total+=Math.abs(a.pixels[i]-b.pixels[i]);
   return total/(a.pixels.length*255);
 }
+
+/** Mean absolute pixel change exposes shader noise under subpixel camera movement. */
+export function patchDifference(a:Buffer,b:Buffer,x:number,y:number,w:number,h:number):number {
+  const first=decodePNG(a),second=decodePNG(b);let total=0,count=0;
+  if(first.width!==second.width||first.height!==second.height)throw new Error('Mismatched screenshots');
+  for(let row=y;row<Math.min(first.height,y+h);row++)for(let col=x;col<Math.min(first.width,x+w);col++)for(let channel=0;channel<3;channel++) {
+    total+=Math.abs(first.pixels[(row*first.width+col)*first.channels+channel]-second.pixels[(row*second.width+col)*second.channels+channel]);count++;
+  }
+  return total/(count*255);
+}
