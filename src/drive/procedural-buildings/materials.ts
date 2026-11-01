@@ -1,3 +1,4 @@
+import { createWindowInteriors, WINDOW_ATLAS_GLSL } from '../window-interiors';
 /**
  * Material library. Every surface is procedural (no texture files):
  *
@@ -5,10 +6,10 @@
  *   onBeforeCompile (tile grids, panel seams, ribbed shutters, corrugated
  *   metal), grime streaks, roughness breakup, bump from the pattern, and
  *   rain wetness on up-facing faces;
- * - windows: glass that reflects the environment, with an interior-mapped
- *   room behind it (walls, floor, ceiling lamp, furniture / people
- *   silhouettes, blinds, TV glow) drawn as emission;
- * - neon: unlit HDR tubes with a rounded core and per-channel flicker.
+ * - windows: glass that reflects the environment, with mipmapped static room
+ *   panels (walls, floor, ceiling lamps, furniture / people and broad shades)
+ *   drawn as stable emission;
+ * - neon: steady unlit HDR tubes with view-independent emission.
  *
  * Keys: "concrete", "tileA", ..., "neon:ff2a6d:2" (colour, flicker channel),
  * "emit:ffaa55:3" (colour, HDR intensity), "win", "winOffice", ...
@@ -282,143 +283,36 @@ vec3 cpRoomLight(float seed, float style) {
   return c;
 }
 
-vec3 cpInterior(vec2 uv, vec4 win, vec3 Vw, vec3 Nw) {
-  float seed = win.x; float W = win.y; float H = win.z; float style = win.w;
-  vec2 pixelUv = fwidth(uv);
-  vec3 h = cpH3(seed * 91.7);
-  vec3 h2 = cpH3(seed * 13.3 + 7.0);
-  vec3 h3 = cpH3(seed * 3.71 + 2.0);
-  float litP = style > 1.5 && style < 2.5 ? uLit * 1.15 : (style > 0.5 && style < 1.5 ? 0.92 : uLit);
-  float lit = step(h.x, litP);
-  vec3 T = normalize(cross(vec3(0.0, 1.0, 0.0), Nw));
-  vec3 B = vec3(0.0, 1.0, 0.0);
-  vec3 d = vec3(dot(Vw, T), dot(Vw, B), dot(Vw, Nw));
-  d.z = min(d.z, -0.02);
-  d = normalize(d);
-  vec3 p = vec3(uv.x * W, uv.y * H, 0.0);
-  float depth = style > 1.5 && style < 2.5 ? 7.0 + h.y * 6.0 : 2.6 + h.y * 2.8;
-  vec3 bmin, bmax;
-  if (style > 1.5 && style < 2.5) { bmin = vec3(-9.0, -0.02, -depth); bmax = vec3(W + 9.0, H + 0.02, 0.0); }
-  else if (style > 3.5) { bmin = vec3(-0.35, -0.6, -3.4); bmax = vec3(W + 0.35, H + 0.25, 0.0); }
-  else if (style > 0.5 && style < 1.5) { bmin = vec3(-1.0 - h2.x, -0.05, -depth); bmax = vec3(W + 1.0 + h2.y, H + 0.3, 0.0); }
-  else { bmin = vec3(-0.5 - h2.x * 1.6, -0.95, -depth); bmax = vec3(W + 0.5 + h2.y * 1.6, H + 0.35, 0.0); }
-  vec3 dd = d + vec3(1e-5);
-  vec3 t1 = (bmin - p) / dd; vec3 t2 = (bmax - p) / dd;
-  vec3 tf = max(t1, t2);
-  float t = min(min(tf.x, tf.y), tf.z);
-  vec3 hit = p + d * t;
+${WINDOW_ATLAS_GLSL}
 
-  vec3 L = cpRoomLight(seed, style);
-  vec3 wallC = mix(vec3(0.55, 0.52, 0.48), vec3(0.35, 0.4, 0.45), h3.x);
-  if (h3.y > 0.8) wallC = mix(wallC, vec3(0.5, 0.2, 0.3), 0.6);
-  vec3 col;
-  float roomH = bmax.y - bmin.y;
-  vec2 lampP = vec2(mix(bmin.x, bmax.x, 0.3 + 0.4 * h3.z), mix(bmin.z, 0.0, 0.45));
-  if (t == tf.z) {
-    // back wall: poster / shelf / screen
-    col = wallC * 0.75;
-    vec2 q = hit.xy;
-    float poster = step(abs(q.x - (bmin.x + (bmax.x - bmin.x) * h2.z)), 0.35) * step(abs(q.y - (bmin.y + roomH * 0.62)), 0.45);
-    col = mix(col, cpH3(seed * 2.0) * 0.9, poster * step(0.4, h3.x));
-    if (style > 1.5 && style < 2.5) col = mix(vec3(0.25, 0.27, 0.3), vec3(0.6, 0.65, 0.7), step(0.5, fract(q.x * 0.35)) * 0.3);
-  } else if (t == tf.y) {
-    if (d.y > 0.0) {
-      // ceiling + lamp
-      col = wallC * 0.9;
-      float lamp = 1.0 - smoothstep(0.1, 0.22, length(hit.xz - lampP));
-      if (style > 1.5 && style < 2.5) {
-        vec2 g = abs(fract(hit.xz * vec2(0.42, 0.55)) - 0.5);
-        lamp = step(g.x, 0.12) * step(g.y, 0.3) * 0.45;
-      }
-      col += lamp * 6.0;
-    } else {
-      // floor
-      col = mix(vec3(0.25, 0.2, 0.17), vec3(0.18, 0.2, 0.22), h3.z) * 0.6;
-      col *= 0.8 + 0.2 * step(0.5, fract(hit.x * 1.5));
-    }
-  } else {
-    col = wallC * 0.55;
-  }
-  // light falloff from the lamp
-  float dist = length(vec2(hit.x, hit.z) - lampP);
-  col *= 0.35 + 0.9 / (1.0 + dist * dist * 0.25);
-  col *= mix(1.0, 0.65, smoothstep(0.0, depth, -hit.z));
-
-  // silhouettes: furniture / people on a mid plane
-  float zs = 0.9 + h2.x * 1.6;
-  float ts = zs / -d.z;
-  if (ts < t) {
-    vec3 q = p + d * ts;
-    float floorY = bmin.y;
-    float sil = 0.0;
-    float cx = mix(bmin.x + 0.4, bmax.x - 0.4, h3.x);
-    // sofa / desk / counter
-    sil = max(sil, step(abs(q.x - cx), 0.5 + h.z * 0.6) * step(q.y, floorY + 0.75 + h2.y * 0.25));
-    // a person
-    if (h3.y < 0.45) {
-      float px = mix(bmin.x + 0.6, bmax.x - 0.6, h.z);
-      float head = 1.0 - step(0.12, length(q.xy - vec2(px, floorY + 1.62)));
-      float body = step(abs(q.x - px), 0.22 - max(0.0, q.y - floorY - 1.25) * 0.4) * step(q.y, floorY + 1.45);
-      sil = max(sil, max(head, body));
-    }
-    // plant / shelf
-    if (h.y > 0.6) {
-      float sx = mix(bmin.x + 0.3, bmax.x - 0.3, fract(h.y * 7.0));
-      sil = max(sil, step(abs(q.x - sx), 0.25) * step(q.y, floorY + 1.9) * step(0.5, fract(q.y * 2.5) + 0.35));
-    }
-    col = mix(col, col * 0.06, sil);
-  }
-
-  // Steady TV glow: room lighting must not flash as the player drives.
-  float tv = step(0.75, h2.z) * step(style, 0.5);
-  vec3 lightC = mix(L, vec3(0.45, 0.6, 1.0), tv);
-
-  vec3 room = col * lightC * lit;
-
-  // blinds / curtains on the glass
-  float cover = h3.x < 0.35 ? 0.0 : (h3.x < 0.7 ? h2.y : 1.0);
-  if (style > 0.5 && style < 1.5) cover *= 0.2;
-  if (style > 3.5) cover = 0.0;
-  float blindsOn = step(1.0 - cover, uv.y) * step(0.55, h.y + 0.2);
-  if (style > 1.5 && style < 2.5) blindsOn *= step(0.75, h3.z);
-  float slatPhase = uv.y * H * 14.0;
-  float slatDetail = 1.0 - smoothstep(0.25, 1.0, pixelUv.y * H * 14.0);
-  float slat = mix(0.685, 0.55 + 0.45 * smoothstep(0.2, 0.5, abs(fract(slatPhase) - 0.5)), slatDetail);
-  float curtainPhase = uv.x * W * 18.0 + sin(uv.x * 7.0) * 2.0;
-  float curtainDetail = 1.0 - smoothstep(1.0, 3.14159, pixelUv.x * (W * 18.0 + 14.0));
-  float curtain = 0.6 + 0.4 * sin(curtainPhase) * curtainDetail;
-  float isCurtain = step(0.5, h2.x);
-  vec3 blinds = lightC * (lit * 0.55 + 0.03) * mix(slat, curtain, isCurtain) * mix(vec3(1.0), vec3(1.0, 0.75, 0.6), isCurtain);
-  room = mix(room, blinds, blindsOn);
-
-  // unlit rooms still catch a little city glow
-  room += (1.0 - lit) * col * vec3(0.05, 0.04, 0.08);
-  // Subpixel interiors converge to stable room illumination instead of aliasing furniture and slats.
-  room = mix(room, lightC * (0.16 * lit + 0.008), smoothstep(0.08, 0.35, max(pixelUv.x, pixelUv.y)));
-  return room * uRoomBright * (style > 0.5 && style < 1.5 ? 1.15 : 1.0) * (style > 2.5 && style < 3.5 ? 0.35 : 1.0);
-}
 `;
 
+let roomInteriors:ReturnType<typeof createWindowInteriors>|undefined;
 function windowMat(): MeshStandardMaterial {
-  const m = new MeshStandardMaterial({ color: 0x050608, roughness: 0.06, metalness: 0.1, envMapIntensity: 1.2 });
+  const m = new MeshStandardMaterial({ color: 0x050608, roughness: 0.24, metalness: 0.05, envMapIntensity: 0.7, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
   // Room identity is constant per pane; interpolating a hash seed amplifies rounding into visible noise.
   m.onBeforeCompile = (s: WebGLProgramParametersWithUniforms) => {
     s.uniforms.uTime = shared.uTime;
     s.uniforms.uLit = shared.uLit;
     s.uniforms.uRoomBright = shared.uRoomBright;
+    s.uniforms.tRoomInteriors = {value:roomInteriors??=createWindowInteriors()};
     s.vertexShader = s.vertexShader
-      .replace("#include <common>", "#include <common>\n attribute vec4 aWin;\n flat varying vec4 vWin;\n varying vec2 vWinUv;\n" + VERT_PARS)
-      .replace("#include <project_vertex>", "#include <project_vertex>\n vWin = aWin; vWinUv = uv;\n" + VERT_MAIN);
+      .replace("#include <common>", "#include <common>\n attribute vec4 aWin; attribute vec2 aFrame;\n flat varying vec4 vWin; flat varying vec2 vFrame;\n varying vec2 vWinUv;\n" + VERT_PARS)
+      .replace("#include <project_vertex>", "#include <project_vertex>\n vWin = aWin; vFrame=aFrame; vWinUv = uv;\n" + VERT_MAIN);
     s.fragmentShader = s.fragmentShader
-      .replace("#include <common>", "#include <common>\n flat varying vec4 vWin;\n varying vec2 vWinUv;\n varying vec3 vCpWPos;\n varying vec3 vCpWNrm;\n" + GLSL_INTERIOR)
+      .replace("#include <common>", "#include <common>\n flat varying vec4 vWin; flat varying vec2 vFrame;\n varying vec2 vWinUv;\n varying vec3 vCpWPos;\n varying vec3 vCpWNrm;\n" + GLSL_INTERIOR)
       .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
-        vec3 cpV = normalize((vec4(-vViewPosition, 0.0) * viewMatrix).xyz);
-        vec3 cpNw = normalize(vCpWNrm);
         vec2 cpUv = vWinUv;
         if (vWin.w > 3.5) { float r = length(cpUv - 0.5); if (r > 0.5) discard; }
-        totalEmissiveRadiance += cpInterior(cpUv, vWin, cpV, cpNw);`);
+        vec2 frameCell=cpUv*vFrame,frameIndex=floor(frameCell+.5);
+        vec2 frameWidth=.018*vFrame/max(vWin.yz,vec2(.1));
+        vec2 framePixel=max(fwidth(frameCell),vec2(.00001));
+        vec2 frameCoverage=clamp((min(frameCell+framePixel*.5,frameIndex+frameWidth)-max(frameCell-framePixel*.5,frameIndex-frameWidth))/framePixel,0.,1.);
+        frameCoverage*=step(vec2(.5),frameIndex)*step(frameIndex,vFrame-.5);
+        float mullion=max(frameCoverage.x,frameCoverage.y);
+        totalEmissiveRadiance += cpInterior(cpUv, vWin)*(1.-mullion*.92);`);
   };
-  m.customProgramCacheKey = () => "win-stable-interior-v2";
+  m.customProgramCacheKey = () => "win-mipmapped-interior-v5";
   return m;
 }
 
@@ -440,18 +334,9 @@ void main() {
 }`;
 
 export const GLSL_FLICKER = /* glsl */ `
-float cpFlicker(float ch, float t) {
-  if (ch < 0.5) return 1.0;
-  float s = ch * 17.31;
-  float n = fract(sin(floor(t * 22.0 + s) * 12.9898 + s) * 43758.5453);
-  if (ch > 4.5) {
-    // broken tube: mostly dim, sputters
-    float b = step(0.55, fract(sin(floor(t * 3.0 + s) * 78.233) * 43758.5453));
-    return mix(0.08, step(0.3, n), b);
-  }
-  float burst = step(0.86, fract(sin(floor(t * 0.9 + s) * 78.233 + s) * 43758.5453));
-  return mix(1.0, step(0.4, n) * 0.9 + 0.1, burst);
-}
+// All city lighting is steady. Keep the shared helper for imported sign compatibility.
+float cpFlicker(float ch, float t) { return 1.0; }
+
 `;
 
 const NEON_FRAG = /* glsl */ `
@@ -468,15 +353,9 @@ varying vec3 vV;
 varying vec3 vW;
 ${GLSL_FLICKER}
 void main() {
-  float facing = abs(dot(normalize(vN), normalize(vV)));
-  float core = pow(facing, 3.0);
-  vec3 c = uColor * (0.55 + 0.6 * facing) + vec3(1.0) * core * 0.35 * length(uColor);
-  float f = cpFlicker(uCh, uTime);
-  if (uChase > 0.0) {
-    float ph = fract(vW.y * 0.045 - uTime * 0.35 + uCh * 0.13);
-    f *= 0.25 + 0.75 * smoothstep(0.0, 0.08, ph) * (1.0 - smoothstep(0.08, 0.5, ph)) + 0.25 * step(0.97, ph);
-  }
-  gl_FragColor = vec4(c * uIntensity * uNeon * f, 1.0);
+  // Emission is independent of the moving eye and the original broken-tube/chaser channels.
+  vec3 c = uColor + vec3(0.18) * length(uColor);
+  gl_FragColor = vec4(c * uIntensity * uNeon, 1.0);
   #include <fog_fragment>
 }`;
 

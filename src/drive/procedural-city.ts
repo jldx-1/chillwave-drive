@@ -56,7 +56,7 @@ function instanceShader(material: THREE.Material): void {
     #endif
   `);
 }
-interface Template { family: ProceduralFamily; bounds: THREE.Box3; meshes: ViewBatch[]; detail: ViewBatch[]; }
+interface Template { family: ProceduralFamily; bounds: THREE.Box3; meshes: ViewBatch[]; detail: ViewBatch[]; windows: {seed:number;points:THREE.Vector3[]}[]; }
 
 /** Six deterministic generated buildings, instanced across the streamed city instead of rebuilt per plot. */
 export class ProceduralCity {
@@ -91,11 +91,23 @@ export class ProceduralCity {
       generated.updateMatrixWorld(true);
       // Flatten static extras (sign faces, tube text, stalls) and merge by material/attributes.
       const batches = new CityMaterialBatches(generated);
+      const windows:Template['windows']=[];
       const parts = new Map<string, { material: THREE.Material; detail: boolean; geometries: THREE.BufferGeometry[] }>();
       generated.traverse(o => {
         if (!(o instanceof THREE.Mesh) || !o.visible || Array.isArray(o.material) || !o.material.visible) return;
         const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
         g.applyMatrix4(o.matrixWorld);
+        const win=g.getAttribute('aWin'),uv=g.getAttribute('uv'),position=g.getAttribute('position');
+        if(win&&uv)for(let i=0;i<win.count;i+=6) {
+          // A sparse sample from each facade is enough for camera-motion QA.
+          if(i/6%3!==0)continue;
+          const corners:THREE.Vector3[]=[];
+          for(const [u,v] of [[0,0],[1,0],[0,1]]) {
+            const at=Array.from({length:6},(_,j)=>i+j).find(j=>Math.abs(uv.getX(j)-u)<.001&&Math.abs(uv.getY(j)-v)<.001);
+            if(at!==undefined)corners.push(new THREE.Vector3().fromBufferAttribute(position,at));
+          }
+          if(corners.length===3)windows.push({seed:win.getX(i),points:corners});
+        }
         const material = batches.material(o.material, g);
         const key = material.uuid + ':' + Object.keys(g.attributes).sort().join(',') + ':' + !!o.userData.cityDetail;
         if (!parts.has(key)) parts.set(key, { material, detail: !!o.userData.cityDetail, geometries: [] });
@@ -117,7 +129,7 @@ export class ProceduralCity {
       const originals = new Set<THREE.BufferGeometry>();
       generated.traverse(o => { if (o instanceof THREE.Mesh) originals.add(o.geometry); });
       originals.forEach(g => g.dispose());
-      this.templates.push({ family, bounds, meshes, detail });
+      this.templates.push({ family, bounds, meshes, detail, windows });
     }
   }
   update(chunks: CityChunkSpec[], origin: number, focusS = 0, focusX = 0): void {
@@ -172,6 +184,37 @@ export class ProceduralCity {
     }
     this.cameraVisibility.submittedPieces=submitted;
     this.cameraVisibility.culledPieces=eligible-submitted;
+  }
+  /** QA projects fixed locations inside real window panes, allowing the same surface to be compared while driving. */
+  windowProbes(camera:THREE.Camera) {
+    const result:{id:string;area:number;points:number[][]}[]=[],world=new THREE.Matrix4(),center=new THREE.Vector3();
+    for(const entry of this.entries) {
+      if(!this.viewFrustum.intersectsBox(entry.bounds))continue;
+      world.multiplyMatrices(this.group.matrixWorld,entry.matrix);
+      for(const [paneIndex,pane] of entry.template.windows.entries()) {
+        const [a,b,c]=pane.points.map(p=>p.clone().applyMatrix4(world));
+        const normal=b.clone().sub(a).cross(c.clone().sub(a));center.copy(b).add(c).multiplyScalar(.5);
+        if(normal.dot(camera.position.clone().sub(center))<=0)continue;
+        const projected=[a,b,c].map(p=>p.clone().project(camera));
+        if(projected.some(p=>p.z<0||p.z>1||Math.abs(p.x)>.88||Math.abs(p.y)>.8))continue;
+        const area=Math.abs((projected[1].x-projected[0].x)*(projected[2].y-projected[0].y)-(projected[1].y-projected[0].y)*(projected[2].x-projected[0].x));
+        if(area<.002||area>.035)continue;
+        const ray=new THREE.Ray(camera.position.clone(),center.clone().sub(camera.position).normalize());
+        const distance=camera.position.distanceTo(center);
+        if(this.entries.some(other=>{
+          if(other===entry)return false;
+          const hit=ray.intersectBox(other.bounds.clone().applyMatrix4(this.group.matrixWorld),new THREE.Vector3());
+          return hit!==null&&hit.distanceTo(camera.position)<distance-.2;
+        }))continue;
+        const points:number[][]=[];
+        for(let y=0;y<5;y++)for(let x=0;x<5;x++) {
+          const p=a.clone().addScaledVector(b.clone().sub(a),.2+x*.15).addScaledVector(c.clone().sub(a),.2+y*.15).project(camera);
+          points.push([p.x,p.y]);
+        }
+        result.push({id:entry.parcel.id+':'+paneIndex,area,points});
+      }
+    }
+    return result.sort((a,b)=>b.area-a.area).slice(0,80);
   }
   animate(time: number, reduced: boolean): void { shared.uTime.value = reduced ? 0 : time; }
   setNeon(enabled: boolean): void { shared.uNeon.value = enabled ? 1.4 : 0; }

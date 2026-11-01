@@ -36,7 +36,7 @@ const proxyMat = new MeshBasicMaterial({ visible: false });
 
 const KEEP_SURFACE = ["position", "normal"];
 const KEEP_UV = ["position", "normal", "uv"];
-const KEEP_WIN = ["position", "normal", "uv", "aWin"];
+const KEEP_WIN = ["position", "normal", "uv", "aWin", "aFrame"];
 
 function prep(geo: BufferGeometry, keep: string[]): BufferGeometry {
   const g = geo.index ? geo.toNonIndexed() : geo.clone();

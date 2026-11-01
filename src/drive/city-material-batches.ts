@@ -6,13 +6,13 @@ function constantAttribute(g: THREE.BufferGeometry, name: string, values: number
   for (let i = 0; i < g.attributes.position.count; i++) data.set(values, i * values.length);
   g.setAttribute(name, new THREE.BufferAttribute(data, values.length));
 }
-/** Move per-piece uniforms to vertex attributes, allowing differently colored/flickering tubes to merge. */
+/** Move per-piece uniforms to vertex attributes, allowing differently colored tubes to merge. */
 function attributeMaterial(source: THREE.ShaderMaterial, fields: Record<string, string>): THREE.ShaderMaterial {
   const material = source.clone();
   let declarations = '', assignments = '';
   for (const [name, type] of Object.entries(fields)) {
-    material.fragmentShader = material.fragmentShader.replace(`uniform ${type} ${name};`, `varying ${type} ${name};`);
-    declarations += `attribute ${type} a_${name}; varying ${type} ${name};\n`;
+    material.fragmentShader = material.fragmentShader.replace(`uniform ${type} ${name};`, `flat varying ${type} ${name};`);
+    declarations += `attribute ${type} a_${name}; flat varying ${type} ${name};\n`;
     assignments += `${name} = a_${name};\n`;
     delete material.uniforms[name];
   }

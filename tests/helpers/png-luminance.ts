@@ -72,3 +72,16 @@ export function patchDifference(a:Buffer,b:Buffer,x:number,y:number,w:number,h:n
   }
   return total/(count*255);
 }
+
+/** Bilinear samples follow fixed world positions across a moving camera instead of comparing unrelated pixels. */
+export function projectedSamples(png:Buffer,points:number[][]):number[] {
+  const {width,height,channels,pixels}=decodePNG(png),values:number[]=[];
+  for(const [nx,ny] of points) {
+    const x=(nx*.5+.5)*width-.5,y=(.5-ny*.5)*height-.5,ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy;
+    for(let channel=0;channel<3;channel++) {
+      const read=(dx:number,dy:number)=>pixels[(Math.min(height-1,Math.max(0,iy+dy))*width+Math.min(width-1,Math.max(0,ix+dx)))*channels+channel]/255;
+      values.push((read(0,0)*(1-fx)+read(1,0)*fx)*(1-fy)+(read(0,1)*(1-fx)+read(1,1)*fx)*fy);
+    }
+  }
+  return values;
+}

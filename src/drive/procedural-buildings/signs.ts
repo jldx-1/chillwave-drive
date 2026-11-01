@@ -1,6 +1,6 @@
 /**
  * Signs: canvas-drawn faces (kanji blade signs, lightboxes, neon-on-dark
- * boards), LED tickers, animated ad screens, holograms, and the soft light
+ * boards), steady LED lettering, billboard panels, holograms, and the soft light
  * spill each big sign throws on the wall behind it.
  */
 import {
@@ -262,13 +262,9 @@ uniform float uNeon;
 uniform float uSpan;
 varying vec2 vUv;
 void main() {
-  vec2 c = floor(vUv * uCells);
-  vec2 f = fract(vUv * uCells);
-  float u = fract((c.x + 0.5) / uCells.x * uSpan + uTime * uSpeed);
-  float v = (c.y + 0.5) / uCells.y;
-  float on = texture2D(map, vec2(u, v)).r;
-  float d = 1.0 - smoothstep(0.28, 0.46, length(f - 0.5));
-  vec3 col = uColor * (on * 4.0 + 0.05) * d;
+  // Continuous mipmapped lettering avoids the unfiltered LED grid and scrolling brightness jumps.
+  float on = texture2D(map, vec2(vUv.x * uSpan, vUv.y)).r;
+  vec3 col = uColor * (on * 4.0 + 0.025);
   gl_FragColor = vec4(col * uNeon, 1.0);
   #include <fog_fragment>
 }`;
@@ -398,35 +394,11 @@ uniform vec2 uPx;
 varying vec2 vUv;
 float h1(float n) { return fract(sin(n) * 43758.5453); }
 void main() {
-  float period = 6.0;
-  float tt = uTime + uSeed * 13.0;
-  float k = floor(tt / period);
-  float ph = fract(tt / period);
-  float frame = mod(k, 4.0);
-  vec2 uv = vUv;
-  // slow push-in
-  uv = (uv - 0.5) * (1.0 - ph * 0.06) + 0.5;
-  // glitch around the cut
-  float g = smoothstep(0.96, 1.0, ph) + (1.0 - smoothstep(0.0, 0.05, ph));
-  float band = floor(uv.y * 24.0);
-  uv.x += g * (h1(band + k * 7.0) - 0.5) * 0.15;
-  float ca = 0.004 + g * 0.02;
-  vec2 base = vec2(uv.x, (uv.y + 3.0 - frame) / 4.0);
+  // Each billboard keeps one seeded panel; no cuts, RGB subpixels, scan lines or glitch bursts.
+  float frame = mod(floor(uSeed * 67.0), 4.0);
+  vec2 base = vec2(vUv.x, (vUv.y + 3.0 - frame) / 4.0);
   base.y = clamp(base.y, (3.0 - frame) / 4.0 + 0.001, (4.0 - frame) / 4.0 - 0.001);
-  vec3 c;
-  c.r = texture2D(map, base + vec2(ca, 0.0)).r;
-  c.g = texture2D(map, base).g;
-  c.b = texture2D(map, base - vec2(ca, 0.0)).b;
-  // RGB sub-pixels + scanlines
-  vec2 px = vUv * uPx;
-  vec3 mask = vec3(
-    smoothstep(0.0, 0.2, fract(px.x)) * (1.0 - smoothstep(0.33, 0.45, fract(px.x))),
-    smoothstep(0.33, 0.45, fract(px.x)) * (1.0 - smoothstep(0.66, 0.78, fract(px.x))),
-    smoothstep(0.66, 0.78, fract(px.x)));
-  mask = mix(vec3(1.0), mask * 2.4, 0.5);
-  float scan = 0.75 + 0.25 * sin(px.y * 6.2831);
-  float roll = 0.9 + 0.1 * sin(vUv.y * 3.0 - uTime * 2.0);
-  vec3 col = c * mask * scan * roll * uIntensity * (1.0 + g * 1.5);
+  vec3 col = texture2D(map, base).rgb * uIntensity;
   gl_FragColor = vec4(col * uNeon, 1.0);
   #include <fog_fragment>
 }`;
@@ -462,9 +434,7 @@ uniform vec3 uColor; uniform float uTime; uniform float uNeon;
 varying vec3 vN; varying vec3 vV; varying vec3 vW;
 void main() {
   float fr = 1.0 - abs(dot(normalize(vN), normalize(vV)));
-  float scan = 0.55 + 0.45 * step(0.5, fract(vW.y * 6.0 - uTime * 1.5));
-  float fl = 0.85 + 0.15 * sin(uTime * 40.0) * sin(uTime * 7.0);
-  float a = (0.12 + pow(fr, 2.0) * 0.9) * scan * fl;
+  float a = 0.12 + pow(fr, 2.0) * 0.9;
   gl_FragColor = vec4(uColor * a * 2.5 * uNeon, 1.0);
 }`;
 
@@ -509,6 +479,7 @@ function glowMat(color: string, strength: number): MeshBasicMaterial {
     m = new MeshBasicMaterial({
       map: glowTexture(), color: new Color("#" + color).multiplyScalar(strength), transparent: true,
       blending: AdditiveBlending, depthWrite: false, fog: true,
+      polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-2,
     });
     glowMatCache.set(key, m);
   }
@@ -528,6 +499,8 @@ export function glow(b: Builder, x: number, y: number, z: number, w: number, h: 
 
 /** a flat face carrying a sign material (canvas, ticker, screen) */
 export function face(b: Builder, mat: import("three").Material, x: number, y: number, z: number, w: number, h: number, ry = 0): Mesh {
+  // Many imported lightboxes place their face just 4mm ahead of the backing board.
+  mat.polygonOffset=true;mat.polygonOffsetFactor=-1;mat.polygonOffsetUnits=-2;
   const m = new Mesh(new PlaneGeometry(w, h), mat);
   m.position.set(x, y, z);
   m.rotation.y = ry;

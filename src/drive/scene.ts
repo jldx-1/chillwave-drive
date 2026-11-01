@@ -513,6 +513,19 @@ export class DriveScene {
   impact(contact: Contact):void { this.crash.emit(contact); }
   explode(vehicle: Vehicle): void { this.crash.explode(vehicle.x, vehicle.s); }
   explodeTraffic(x:number,s:number):void { this.crash.explode(x,s); }
+  windowProbes(camera:THREE.Camera) {
+    const opaque:THREE.Object3D[]=[];
+    this.player.group.traverse(object=>{
+      if(!(object instanceof THREE.Mesh)||!object.visible)return;
+      const materials=Array.isArray(object.material)?object.material:[object.material];
+      if(materials.some(m=>m.visible&&(!m.transparent||m.opacity>.8)))opaque.push(object);
+    });
+    const ray=new THREE.Raycaster();ray.near=.02;ray.far=12;
+    return this.proceduralCity.windowProbes(camera).filter(pane=>[0,4,12,20,24].every(index=>{
+      const p=pane.points[index];ray.setFromCamera(new THREE.Vector2(p[0],p[1]),camera);
+      return ray.intersectObjects(opaque,false).length===0;
+    }));
+  }
   get assetsLoaded(): boolean { return this.fleetReady && this.player.assetReady; }
   get diagnostics() { let cameraBatches=0;this.scene.traverse(o=>{if(o instanceof ViewBatch)cameraBatches++;});return { renderedPlayer:{x:this.player.group.position.x,y:this.player.group.position.y,z:this.player.group.position.z,yaw:this.player.group.rotation.y},shieldVisual:this.powerupVisuals.shieldPose,missileVisual:this.missileVisuals.diagnostics,loading:{...this.loadingTimings}, visibleTrafficRigs:this.visibleTrafficRigs, proceduralBuildings:this.proceduralCity.diagnostics, atmosphere:{...this.atmosphere.diagnostics,streamBehind:CITY_STREAM_BEHIND,streamAhead:CITY_STREAM_AHEAD},catalog:{available:BUILDING_CATALOG.length,activeAssets:[...new Set([...this.chunks.values()].flatMap(g=>g.userData.catalogIds as number[]))],nearGroups:[...this.chunks.values()].flatMap(g=>g.children).filter(g=>g.userData.detailTier==='near'&&g.visible).length,midGroups:[...this.chunks.values()].flatMap(g=>g.children).filter(g=>g.userData.detailTier==='mid'&&g.visible).length}, aerialTraffic:this.aerialTraffic.diagnostics, cityLighting:this.cityLighting.diagnostics, graphics: { cameraBatches, quality:this.quality, mobile:this.mobile, ...this.post?.diagnostics, effectsReady: this.effectsReady, explosion: this.crash.diagnostics, programs: this.renderer.info.programs?.length ?? 0, mirrorFrames: this.mirrorFrames }, fleetReady: this.fleetReady, fleetFailed: this.fleetFailed, fleet: fleetDiagnostics(), distantVehicles: this.distantFleet.count, vehicleLighting: this.trafficLighting.diagnostics, trafficModels: [...this.cars.values()].map(car => ({ kind: car.kind, model:car.model, ready: car.assetReady, failed: car.assetFailed, lod: car.detailLevel })), ...this.backdrop.diagnostics, cityParcels: [...this.chunks.values()].reduce((n,g)=>n+(g.userData.parcels??0),0), terrainHalfWidth: 740, chunks: this.chunks.size, cars: this.cars.size, origin: this.origin, drawCalls: this.renderer.info.render.calls, renderTriangles:this.renderer.info.render.triangles, geometries: this.renderer.info.memory.geometries, textures: this.renderer.info.memory.textures, resolution: this.pixelRatio, eye:this.player.eye.toArray(),bodyTilt:this.player.bodyTilt,boost:this.player.boostDiagnostics,roadReflection:{visible:this.reflector.visible,anchorZ:this.reflector.position.z,depthBias:(this.reflector.material as THREE.ShaderMaterial).polygonOffset,mipmaps:this.reflector.getRenderTarget().texture.generateMipmaps},mirrorBounds:new THREE.Box3().setFromObject(this.player.mirror).getSize(new THREE.Vector3()).toArray(),weather: this.player.weatherDiagnostics, sheltered: rainSheltered(this.player.group.position.x, this.origin - this.player.group.position.z), modelReady: this.player.assetReady, modelFailed: this.player.assetFailed, hdrReady: this.hdrReady }; }
 }
