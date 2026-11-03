@@ -23,7 +23,7 @@ export const POLICE_TUNE: VehicleTuning = {
 export const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 export const damp = (a: number, b: number, rate: number, dt: number) => a + (b - a) * (1 - Math.exp(-rate * dt));
 export type View = 'chase' | 'cockpit';
-export type Quality = 'low' | 'medium' | 'high' | 'ultra';
+export type Quality = 'potato' | 'low' | 'medium' | 'high' | 'ultra';
 export type Density = 'low' | 'normal' | 'high' | 'dense';
 export interface Controls { throttle: number; brake: number; steer: number; handbrake: boolean; rear: boolean; nitro?: boolean }
 export const neutral = (): Controls => ({ throttle: 0, brake: 0, steer: 0, handbrake: false, rear: false, nitro: false });

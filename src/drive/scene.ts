@@ -292,11 +292,14 @@ export class DriveScene {
     this.proceduralCity.configure(quality);
     if(!this.fleetReady)this.proceduralCity.updateDetail(0,0);
     this.renderer.setPixelRatio(qualityPixelRatio(quality, window.devicePixelRatio));
-    this.rain.geometry.setDrawRange(0, { low: 900, medium: 1800, high: 3000, ultra: 3600 }[quality]);
-    this.reflector.visible = quality !== 'low';
+    this.rain.geometry.setDrawRange(0, { potato: 0, low: 900, medium: 1800, high: 3000, ultra: 3600 }[quality]);
+    this.reflector.visible = quality !== 'low' && quality !== 'potato';
+    const effects=quality!=='potato';
+    this.cityLighting.group.visible=effects;this.trafficLighting.group.visible=effects;this.carRim.visible=effects;
+    this.rainSplashes.mesh.visible=effects;
     const reflectionSize=quality==='high'||quality==='ultra'?1024:512;
     this.reflector.getRenderTarget().setSize(reflectionSize,reflectionSize);
-    this.rearTarget.setSize(quality === 'high' || quality === 'ultra' ? 512 : 256, quality === 'high' || quality === 'ultra' ? 192 : 96);
+    this.rearTarget.setSize(quality === 'high' || quality === 'ultra' ? 512 : quality==='potato'?128:256, quality === 'high' || quality === 'ultra' ? 192 : quality==='potato'?48:96);
     this.pixelRatio = this.renderer.getPixelRatio();
     this.sunLighting.configure(quality);
     this.post?.configure(quality, this.renderWidth, this.renderHeight, this.pixelRatio);
@@ -383,7 +386,7 @@ export class DriveScene {
       const distance = Math.abs(a.s - vehicle.s);
       const spec=CYBER_VEHICLES[cyberModel(fleetKind(a.kind),a.model)];
       const inView = distance < 25 || this.viewCameras.contains(a.x,spec.height/2,sceneZ(a.s,this.origin),Math.hypot(spec.width,spec.height,spec.length)/2);
-      if (!inView || distance > (this.quality === 'low' ? 180 : 260)) {
+      if (!inView || distance > (this.quality === 'potato' ? 100 : this.quality === 'low' ? 180 : 260)) {
         const existing = this.cars.get(a.id);
         if (existing) {
           existing.group.visible = false;
@@ -395,7 +398,7 @@ export class DriveScene {
       this.carLastVisible.set(a.id,time); this.visibleTrafficRigs++;
       let car = this.cars.get(a.id);
       const pixels=this.viewCameras.projectedDiameter(a.x,spec.height/2,sceneZ(a.s,this.origin),Math.hypot(spec.width,spec.height,spec.length)/2);
-      const threshold={low:110,medium:90,high:70,ultra:55}[this.quality];
+      const threshold={potato:200,low:110,medium:90,high:70,ultra:55}[this.quality];
       const desiredDetail:0|1=distance<12||pixels>threshold*(car?.detailLevel===0?.78:1)?0:1;
       if (!car) {
         car=new CarVisual(spec.colors[a.id%spec.colors.length],false,a.kind,a.model,desiredDetail);
@@ -415,7 +418,7 @@ export class DriveScene {
     this.trafficLighting.update(agents, vehicle.s, this.origin, time, this.quality, dt, alpha);
     let sprayCount = 0;
     const emitSpray = (x: number, s: number, speed: number, yaw: number, direction: number, id: number,width=2,length=4.55) => {
-      if (speed < 9 || Math.abs(s - vehicle.s) > 100 || reduced) return;
+      if (this.quality==='potato' || speed < 9 || Math.abs(s - vehicle.s) > 100 || reduced) return;
       const sin = Math.sin(yaw), cos = Math.cos(yaw), strength = Math.min(1, (speed - 9) / 30);
       const disturbance=id===-1?1+Math.min(.5,Math.abs(vehicle.steering)*.8+(braking?.2:0)):1;
       const count=Math.ceil((this.quality==='low'?12:this.quality==='medium'?24:48)*strength*disturbance);
@@ -438,15 +441,17 @@ export class DriveScene {
     this.spray.geometry.setDrawRange(0, sprayCount);
     if(sprayCount){const positions=this.spray.geometry.getAttribute('position') as THREE.BufferAttribute;
       positions.clearUpdateRanges();positions.addUpdateRange(0,sprayCount*3);positions.needsUpdate=true;}
-    this.rainSplashes.update(time, vehicle.s, this.origin, reduced);
+    if(this.quality!=='potato')this.rainSplashes.update(time, vehicle.s, this.origin, reduced);
     this.rain.position.copy(this.player.group.position);
     this.rainField.update(dt, pose.x, pose.s, pose.yaw, reduced, this.rain.geometry.drawRange.count / 2);
     // Upload only active vertices; lower presets do not change the unused tail.
     const rainVertices=this.rain.geometry.drawRange.count;
     const rainPositions=this.rain.geometry.getAttribute('position') as THREE.BufferAttribute;
     const rainOpacity=this.rain.geometry.getAttribute('rainOpacity') as THREE.BufferAttribute;
-    rainPositions.clearUpdateRanges();rainPositions.addUpdateRange(0,rainVertices*3);rainPositions.needsUpdate=true;
-    rainOpacity.clearUpdateRanges();rainOpacity.addUpdateRange(0,rainVertices);rainOpacity.needsUpdate=true;
+    if(rainVertices){
+      rainPositions.clearUpdateRanges();rainPositions.addUpdateRange(0,rainVertices*3);rainPositions.needsUpdate=true;
+      rainOpacity.clearUpdateRanges();rainOpacity.addUpdateRange(0,rainVertices);rainOpacity.needsUpdate=true;
+    }
     this.profiler.update(performance.now()-updateStarted);
   }
 
@@ -467,7 +472,7 @@ export class DriveScene {
       finally { this.renderer.setRenderTarget(target); this.renderer.shadowMap.autoUpdate = shadows; this.player.group.visible = playerVisible; this.reflector.visible = reflective; }
     }
     if (!this.post) { this.post = new Presentation(this.renderer, this.scene, camera); this.post.configure(this.quality, this.renderWidth, this.renderHeight, this.pixelRatio); }
-    if (this.quality === 'low') this.renderer.render(this.scene, camera); else this.post.render();
+    if (this.quality === 'low' || this.quality === 'potato') this.renderer.render(this.scene, camera); else this.post.render();
     this.profiler.end();
     this.aerialTraffic.inspectView(camera,this.origin);this.atmosphere.inspectView(camera);
     this.proceduralCity.inspectCamera(camera);
@@ -557,5 +562,5 @@ export class DriveScene {
     }));
   }
   get assetsLoaded(): boolean { return this.fleetReady && this.player.assetReady; }
-  get diagnostics() { let cameraBatches=0;this.scene.traverse(o=>{if(o instanceof ViewBatch)cameraBatches++;});return {infrastructure:this.infrastructure.diagnostics,streaming:this.chunkStreamer?.diagnostics,performance:this.profiler.diagnostics, renderedPlayer:{x:this.player.group.position.x,y:this.player.group.position.y,z:this.player.group.position.z,yaw:this.player.group.rotation.y},shieldVisual:this.powerupVisuals.shieldPose,missileVisual:this.missileVisuals.diagnostics,loading:{...this.loadingTimings}, visibleTrafficRigs:this.visibleTrafficRigs, proceduralBuildings:this.proceduralCity.diagnostics, atmosphere:{...this.atmosphere.diagnostics,streamBehind:CITY_STREAM_BEHIND,streamAhead:CITY_STREAM_AHEAD},catalog:{available:BUILDING_CATALOG.length,activeAssets:[...new Set([...this.chunks.values()].flatMap(g=>g.userData.catalogIds as number[]))],nearGroups:[...this.chunks.values()].flatMap(g=>g.children).filter(g=>g.userData.detailTier==='near'&&g.visible).length,midGroups:[...this.chunks.values()].flatMap(g=>g.children).filter(g=>g.userData.detailTier==='mid'&&g.visible).length}, aerialTraffic:this.aerialTraffic.diagnostics, cityLighting:this.cityLighting.diagnostics, graphics: { cameraBatches, quality:this.quality, mobile:this.mobile, ...this.post?.diagnostics, effectsReady: this.effectsReady, explosion: this.crash.diagnostics, programs: this.renderer.info.programs?.length ?? 0, mirrorFrames: this.mirrorFrames }, fleetReady: this.fleetReady, fleetFailed: this.fleetFailed, fleet: fleetDiagnostics(), distantVehicles: this.distantFleet.count, vehicleLighting: this.trafficLighting.diagnostics, trafficModels: [...this.cars.values()].map(car => ({ kind: car.kind, model:car.model, ready: car.assetReady, failed: car.assetFailed, lod: car.detailLevel })), ...this.backdrop.diagnostics, cityParcels: [...this.chunks.values()].reduce((n,g)=>n+(g.userData.parcels??0),0), terrainHalfWidth: 740, chunks: this.chunks.size, cars: this.cars.size, origin: this.origin, drawCalls: this.renderer.info.render.calls, renderTriangles:this.renderer.info.render.triangles, geometries: this.renderer.info.memory.geometries, textures: this.renderer.info.memory.textures, resolution: this.pixelRatio, eye:this.player.eye.toArray(),bodyTilt:this.player.bodyTilt,boost:this.player.boostDiagnostics,roadReflection:{visible:this.reflector.visible,anchorZ:this.reflector.position.z,depthBias:(this.reflector.material as THREE.ShaderMaterial).polygonOffset,mipmaps:this.reflector.getRenderTarget().texture.generateMipmaps},mirrorBounds:new THREE.Box3().setFromObject(this.player.mirror).getSize(new THREE.Vector3()).toArray(),weather: this.player.weatherDiagnostics, sheltered: rainSheltered(this.player.group.position.x, this.origin - this.player.group.position.z), modelReady: this.player.assetReady, modelFailed: this.player.assetFailed, hdrReady: this.hdrReady }; }
+  get diagnostics() { let cameraBatches=0;this.scene.traverse(o=>{if(o instanceof ViewBatch)cameraBatches++;});return {infrastructure:this.infrastructure.diagnostics,streaming:this.chunkStreamer?.diagnostics,performance:this.profiler.diagnostics, renderedPlayer:{x:this.player.group.position.x,y:this.player.group.position.y,z:this.player.group.position.z,yaw:this.player.group.rotation.y},shieldVisual:this.powerupVisuals.shieldPose,missileVisual:this.missileVisuals.diagnostics,loading:{...this.loadingTimings}, visibleTrafficRigs:this.visibleTrafficRigs, proceduralBuildings:this.proceduralCity.diagnostics, atmosphere:{...this.atmosphere.diagnostics,streamBehind:CITY_STREAM_BEHIND,streamAhead:CITY_STREAM_AHEAD},catalog:{available:BUILDING_CATALOG.length,activeAssets:[...new Set([...this.chunks.values()].flatMap(g=>g.userData.catalogIds as number[]))],nearGroups:[...this.chunks.values()].flatMap(g=>g.children).filter(g=>g.userData.detailTier==='near'&&g.visible).length,midGroups:[...this.chunks.values()].flatMap(g=>g.children).filter(g=>g.userData.detailTier==='mid'&&g.visible).length}, aerialTraffic:this.aerialTraffic.diagnostics, cityLighting:this.cityLighting.diagnostics, graphics: { cameraBatches, quality:this.quality, shadows:this.sunLighting.light.castShadow,rainVertices:this.rain.geometry.drawRange.count,mirrorSize:[this.rearTarget.width,this.rearTarget.height],cityLights:this.cityLighting.group.visible,trafficLights:this.trafficLighting.group.visible, mobile:this.mobile, ...this.post?.diagnostics, effectsReady: this.effectsReady, explosion: this.crash.diagnostics, programs: this.renderer.info.programs?.length ?? 0, mirrorFrames: this.mirrorFrames }, fleetReady: this.fleetReady, fleetFailed: this.fleetFailed, fleet: fleetDiagnostics(), distantVehicles: this.distantFleet.count, vehicleLighting: this.trafficLighting.diagnostics, trafficModels: [...this.cars.values()].map(car => ({ kind: car.kind, model:car.model, ready: car.assetReady, failed: car.assetFailed, lod: car.detailLevel })), ...this.backdrop.diagnostics, cityParcels: [...this.chunks.values()].reduce((n,g)=>n+(g.userData.parcels??0),0), terrainHalfWidth: 740, chunks: this.chunks.size, cars: this.cars.size, origin: this.origin, drawCalls: this.renderer.info.render.calls, renderTriangles:this.renderer.info.render.triangles, geometries: this.renderer.info.memory.geometries, textures: this.renderer.info.memory.textures, resolution: this.pixelRatio, eye:this.player.eye.toArray(),bodyTilt:this.player.bodyTilt,boost:this.player.boostDiagnostics,roadReflection:{visible:this.reflector.visible,anchorZ:this.reflector.position.z,depthBias:(this.reflector.material as THREE.ShaderMaterial).polygonOffset,mipmaps:this.reflector.getRenderTarget().texture.generateMipmaps},mirrorBounds:new THREE.Box3().setFromObject(this.player.mirror).getSize(new THREE.Vector3()).toArray(),weather: this.player.weatherDiagnostics, sheltered: rainSheltered(this.player.group.position.x, this.origin - this.player.group.position.z), modelReady: this.player.assetReady, modelFailed: this.player.assetFailed, hdrReady: this.hdrReady }; }
 }

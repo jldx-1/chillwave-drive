@@ -55,7 +55,7 @@ export class Presentation {
     for (const target of [this.composer.renderTarget1, this.composer.renderTarget2]) if (target.samples !== samples) { target.dispose(); target.samples = samples; }
     this.composer.setPixelRatio(ratio); this.composer.setSize(width, height);
     this.ao.enabled = quality === 'ultra' || quality === 'high'; this.ao.setSize(Math.max(1, Math.floor(width * ratio / 2)), Math.max(1, Math.floor(height * ratio / 2)));
-    this.bloom.enabled = quality !== 'low';
+    this.bloom.enabled = quality !== 'low' && quality !== 'potato';
   }
   render(): void {
     // Keep diagnostics and all AO projections current even when this preset bypasses AO.

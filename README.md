@@ -54,6 +54,11 @@ glass, brighter functional LEDs and alloy/rotor/rubber finishes. Player damage a
 shaders remain active. The car lighting and city neon are brighter, with a wider bloom halo
 on Medium and higher; Low keeps the brighter emitters without a bloom pass.
 
+Potato is the lightest graphics preset: half-resolution rendering, a smaller cockpit mirror,
+shorter building/vehicle detail ranges, and no rain particles, city/traffic light projections,
+road reflections, shadow maps, bloom or ambient occlusion. Neon emitters and gameplay remain active.
+Choose it under **Settings → Graphics quality**; the choice is saved between sessions.
+
 ## Run locally
 
 Requires Node.js 22 or later, npm and [Git LFS](https://git-lfs.com/). After cloning, download the bundled media before building:

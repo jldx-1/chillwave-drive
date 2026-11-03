@@ -58,7 +58,7 @@ export class VehicleLighting {
       // The lightbar still signals; its reflected illumination crossfades rather than strobing the scene.
       const phase=.5+.5*Math.cos(time*Math.PI*2/.6);
       const strength=this.warningSlots[slot].level*(red?phase:1-phase);
-      light.intensity=strength*(quality==='low'?22:46);
+      light.intensity=strength*((quality==='low'||quality==='potato')?22:46);
       const rescue=car?.model==='aegis',color=rescue?(red?'#ffba45':'#35d8ee'):(red?'#ff253a':'#1675ff');
       light.color.set(color);this.colors[i].set(color).multiplyScalar(strength);
       if(car){
@@ -67,7 +67,7 @@ export class VehicleLighting {
         this.positions[i].copy(light.position);
       }
     });
-    const headlights=this.assign(this.beamSlots,quality==='low'?[]:close,playerS,dt);
+    const headlights=this.assign(this.beamSlots,(quality==='low'||quality==='potato')?[]:close,playerS,dt);
     this.beams.forEach((light,i)=>{
       const car=headlights[i];light.intensity=this.beamSlots[i].level*22;
       if(!car)return;

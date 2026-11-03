@@ -8,7 +8,7 @@ import { Vehicle } from '../src/drive/vehicle';
 
 describe('user-selected graphics resolution', () => {
   it('uses fixed preset pixel caps on high-density screens', () => {
-    expect(['low', 'medium', 'high', 'ultra'].map(quality => qualityPixelRatio(quality as 'low' | 'medium' | 'high' | 'ultra', 3))).toEqual([1, 1, 1.25, 1.5]);
+    expect(['potato', 'low', 'medium', 'high', 'ultra'].map(quality => qualityPixelRatio(quality as 'potato' | 'low' | 'medium' | 'high' | 'ultra', 3))).toEqual([.5, 1, 1, 1.25, 1.5]);
   });
   it('respects the screen density without upscaling low-density displays', () => {
     for (const ratio of [.75, 1, 1.1]) expect(qualityPixelRatio('ultra', ratio)).toBe(ratio);
@@ -58,4 +58,10 @@ it('frames the car farther away on portrait phones so adjacent lanes remain visi
   expect(camera.camera.position.z).toBeGreaterThan(12);
   camera.resize(844,390); camera.reset(); camera.update(1/120,vehicle,vehicle.pose(1),0,'chase',false,true);
   expect(camera.camera.position.z).toBeCloseTo(7.5);
+});
+
+it('saves and reloads Potato without changing traffic preferences',()=>{
+  const data=new Map<string,string>(),storage={getItem:(key:string)=>data.get(key)??null,setItem:(key:string,value:string)=>{data.set(key,value);}};
+  const records=new Records(storage,false);records.settings.quality='potato';records.settings.density='dense';records.save();
+  expect(new Records(storage,true).settings).toMatchObject({quality:'potato',density:'dense'});
 });

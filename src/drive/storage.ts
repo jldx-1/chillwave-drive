@@ -15,7 +15,7 @@ export class Records {
       const saved = JSON.parse(storage.getItem('chillwave-drive:settings:v1') || '{}');
       const video=typeof saved.musicVideoUrl==='string'?youtubeVideoId(saved.musicVideoUrl):undefined;
       if(video)this.settings.musicVideoUrl=youtubeVideoURL(video);
-      for (const [key, allowed] of Object.entries({ view: ['chase', 'cockpit'], quality: ['low', 'medium', 'high', 'ultra'], density: ['low', 'normal', 'high', 'dense'] })) {
+      for (const [key, allowed] of Object.entries({ view: ['chase', 'cockpit'], quality: ['potato', 'low', 'medium', 'high', 'ultra'], density: ['low', 'normal', 'high', 'dense'] })) {
         if (allowed.includes(saved[key])) Object.assign(this.settings, { [key]: saved[key] });
       }
       for (const key of ['musicVolume', 'effectsVolume', 'sensitivity'] as const) {

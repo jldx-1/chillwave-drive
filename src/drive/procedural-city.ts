@@ -153,7 +153,7 @@ export class ProceduralCity {
     this.uploads++; this.updateDetail(focusS, focusX, true);
   }
   configure(quality: Quality): void {
-    this.detailDistance = {low:100,medium:180,high:260,ultra:360}[quality];
+    this.detailDistance = {potato:40,low:100,medium:180,high:260,ultra:360}[quality];
   }
   /** Only rebuild fixture instance buffers when a building crosses a hysteresis boundary. */
   updateDetail(s: number, x: number, force = false): void {

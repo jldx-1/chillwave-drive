@@ -19,7 +19,7 @@ export class StableSunShadow {
     this.configure('high'); this.update(6.5,0,0);
   }
   configure(quality:Quality):void {
-    this.light.castShadow=quality!=='low';
+    this.light.castShadow=quality!=='low'&&quality!=='potato';
     const size=quality==='high'||quality==='ultra'?2048:1024;
     if(this.light.shadow.mapSize.x!==size){
       this.light.shadow.map?.dispose(); this.light.shadow.map=null;
