@@ -143,7 +143,9 @@ export class Vehicle {
     const steeringDemand = Math.abs(speed * speed / this.tuning.wheelbase * Math.tan(this.steering));
     const reserve = plantedSteering ? Math.min(.7, steeringDemand / grip * .75) : 0;
     const cornerUse = clamp(Math.max(Math.abs(this.travelRate * speed) / grip, reserve), 0, .92);
-    const traction = grip * Math.sqrt(1 - cornerUse ** 2) * (braking ? 1 : .83);
+    // Give the service brake stronger arcade stopping authority without changing steering or handbrake grip.
+    const brakeGrip = braking && !input.handbrake ? this.tuning.brakeGripMultiplier : 1;
+    const traction = grip * Math.sqrt(1 - cornerUse ** 2) * (braking ? brakeGrip : .83);
     const resistance = Math.sign(speed) * (this.tuning.drag * speed ** 2 + this.tuning.rolling) / this.tuning.mass;
     const longitudinal = this.airborne ? 0 : clamp(drive / this.tuning.mass, -traction, traction);
     // Turbo supplies extra longitudinal thrust while ordinary braking retains full authority.
