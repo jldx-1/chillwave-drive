@@ -110,29 +110,17 @@ test('world streaming releases resources over a 100 km window sweep',async({page
 });
 
 
-test('steering with the brake initiates a real drift and countersteering catches it', async ({ page }) => {
-  await setup(page); await page.setViewportSize({ width: 800, height: 500 });
-  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.clock.install(); await page.clock.pauseAt(new Date()); await page.goto('/?qa&seed=DRIFT');
-  await startDrive(page);
-  await page.keyboard.down('w'); await page.evaluate(() => window.__drive.advance(4));
-  const before = await inspect(page); expect(before.speed).toBeGreaterThan(20);
-  await page.keyboard.down('d'); await page.keyboard.down('s'); // Brake works with the accelerator still held.
-  await page.evaluate(() => window.__drive.advance(.7));
-  const slide = await inspect(page);
-  expect(slide.slipAngle).toBeGreaterThan(.3); expect(slide.yaw).toBeGreaterThan(.35);
-  expect(slide.drift).toBeGreaterThan(.8); expect(slide.speed).toBeLessThan(before.speed);
-  expect(slide.damage).toBe(0);
-  await page.clock.fastForward(50); await page.screenshot({ path: 'test-results/brake-drift.png' });
-  await page.keyboard.up('s'); await page.keyboard.up('d'); await page.keyboard.down('a');
-  await page.evaluate(() => window.__drive.advance(.45)); await page.keyboard.up('a');
-  const caught = await inspect(page); expect(Math.abs(caught.slipAngle)).toBeLessThan(slide.slipAngle * .25);
-  await page.keyboard.up('w'); await page.evaluate(() => window.__drive.advance(1.4));
-  const recovered = await inspect(page);
-  expect(Math.abs(recovered.slipAngle)).toBeLessThan(.06); expect(recovered.drift).toBeLessThan(.05);
-  expect(recovered.damage).toBe(0); expect(recovered.state).toBe('playing'); expect(errors).toEqual([]);
+test('steering under braking stays planted and changes direction promptly',async({page})=>{
+  await setup(page);await page.setViewportSize({width:800,height:500});
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/?qa&seed=PLANTED');await startDrive(page);
+  await page.keyboard.down('w');await page.evaluate(()=>window.__drive.advance(4));
+  const before=await inspect(page);await page.keyboard.down('s');await page.keyboard.down('d');await page.evaluate(()=>window.__drive.advance(.3));
+  const right=await inspect(page);expect(right.x-before.x).toBeGreaterThan(.35);expect(right.speed).toBeLessThan(before.speed);expect(right.slipAngle).toBeCloseTo(0,10);expect(right.drift).toBe(0);
+  await page.keyboard.up('d');await page.keyboard.down('a');await page.evaluate(()=>window.__drive.advance(.5));
+  const left=await inspect(page);expect(left.lateral).toBeLessThan(0);expect(left.slipAngle).toBeCloseTo(0,10);expect(left.drift).toBe(0);expect(left.damage).toBe(0);expect(left.state).toBe('playing');
+  await page.keyboard.up('a');await page.keyboard.up('s');await page.keyboard.up('w');expect(errors).toEqual([]);
 });
-
 
 test('accelerating still permits quick left-right steering without entering a drift', async ({ page }) => {
   await setup(page); await page.setViewportSize({ width: 800, height: 500 });
@@ -183,23 +171,23 @@ test('sunset lighting is ready before driving even when the HDR loads after the 
   expect((await inspect(page)).state).toBe('playing');expect((await inspect(page)).hdrReady).toBe(true);
 });
 
-test('arrow-key handbrake countersteering responds to the newest key and preserves heading on release',async({page})=>{
+test('arrow-key steering responds to the newest key while braking and preserves heading on release',async({page})=>{
   await setup(page);await page.setViewportSize({width:800,height:500});
   await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/?qa&seed=ARROWS');
   await startDrive(page);
   await page.keyboard.down('ArrowUp');await page.evaluate(()=>window.__drive.advance(4));await page.keyboard.up('ArrowUp');
-  await page.keyboard.down('Space');await page.keyboard.down('ArrowLeft');await page.evaluate(()=>window.__drive.advance(.7));
-  const left=await inspect(page);expect(left.slipAngle).toBeLessThan(-.25);
+  await page.keyboard.down('Space');await page.keyboard.down('ArrowLeft');await page.evaluate(()=>window.__drive.advance(.2));
+  const left=await inspect(page);expect(left.yaw).toBeLessThan(-.04);expect(left.slipAngle).toBeCloseTo(0,10);expect(left.drift).toBe(0);
   // Keep Left held while pressing Right: the newest direction must win, including against key repeat.
   await page.keyboard.down('ArrowRight');await page.keyboard.down('ArrowLeft');
   await page.evaluate(()=>window.__drive.advance(1/60));
   const immediate=await inspect(page);expect(immediate.steering).toBeGreaterThan(0);
-  await page.keyboard.up('ArrowLeft');await page.evaluate(()=>window.__drive.advance(.3));
+  await page.keyboard.up('ArrowLeft');await page.evaluate(()=>window.__drive.advance(.35));
   const right=await inspect(page);expect(right.lateral).toBeGreaterThan(0);expect(right.yaw).toBeGreaterThan(left.yaw);expect(right.yawRate).toBeGreaterThan(0);
   await page.keyboard.up('Space');await page.evaluate(()=>window.__drive.advance(.5));
   const caught=await inspect(page);expect(Math.abs(caught.slipAngle)).toBeLessThan(.08);expect(caught.drift).toBeLessThan(.06);expect(caught.steering).toBeGreaterThan(0);
   await page.keyboard.up('ArrowRight');
-  // A smaller separate turn verifies release without coasting a large drift into a barrier.
+  // A smaller separate turn verifies release without coasting a large turn into a barrier.
   await page.keyboard.press('Escape');await page.getByRole('button',{name:'RESTART DRIVE'}).click();
   await page.keyboard.down('ArrowUp');await page.evaluate(()=>window.__drive.advance(3));await page.keyboard.up('ArrowUp');
   await page.keyboard.down('ArrowRight');await page.evaluate(()=>window.__drive.advance(.2));await page.keyboard.up('ArrowRight');

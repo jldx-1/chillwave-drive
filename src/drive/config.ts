@@ -10,7 +10,7 @@ export const VEHICLE_DIMENSIONS = { ...COLLISION_PROFILES, van: { width: 2, leng
 export const TUNE = {
   damagePowerLoss: 0, mass: 1480, wheelbase: 2.7, engineForce: 10300, brakeForce: 26000, brakeGripMultiplier: 1.6,
   drag: .44, rolling: 210, wetGrip: .74, dryGrip: 1.02,
-  maxSpeed: 180 / MPS_TO_MPH, width: CYBER_VEHICLES.nebula.width, length: CYBER_VEHICLES.nebula.length, footprint: cyberHull('nebula'), driveFalloffSpeed: 100, brakeDriftAssist: true, steerResponse: 32, steerReturn: 42, steerSlew: 4.8, cornerAssist: 1.42,
+  maxSpeed: 180 / MPS_TO_MPH, width: CYBER_VEHICLES.nebula.width, length: CYBER_VEHICLES.nebula.length, footprint: cyberHull('nebula'), driveFalloffSpeed: 100, brakeDriftAssist: false, plantedHandling: true, steerAuthority: 1.5, steerResponse: 48, steerReturn: 64, steerSlew: 7.2, cornerAssist: 2.2,
 };
 export type VehicleTuning = typeof TUNE;
 /** Base interceptor tire/force controller; traffic applies each response model’s dimensions and powertrain. */
@@ -18,7 +18,7 @@ export const POLICE_TUNE: VehicleTuning = {
   ...TUNE, damagePowerLoss: .0035, mass: CYBER_VEHICLES.vortex.mass, wheelbase: CYBER_VEHICLES.vortex.wheelbase, engineForce: 36000, brakeForce: 34000, brakeGripMultiplier: 1,
   drag: .48, rolling: 250, wetGrip: 1.06, maxSpeed: CYBER_VEHICLES.vortex.speed, steerResponse:18, steerReturn:26, steerSlew:2.4,
   width: POLICE_SIZE.width, length: POLICE_SIZE.length, footprint: cyberHull('vortex'), driveFalloffSpeed: 180,
-  brakeDriftAssist: false, cornerAssist: 1.26,
+  brakeDriftAssist: false, plantedHandling: false, steerAuthority: 1, cornerAssist: 1.26,
 };
 export const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
 export const damp = (a: number, b: number, rate: number, dt: number) => a + (b - a) * (1 - Math.exp(-rate * dt));

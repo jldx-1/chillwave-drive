@@ -63,8 +63,9 @@ describe('median crossovers', () => {
   });
   it('drives through an open crossover into the oncoming lanes with ordinary steering', () => {
     const player = new Vehicle(), traffic = new Traffic('CROSSING'); traffic.agents = [];
-    player.x = 2.9; player.s = 245; player.speed = 35; player.simulationTime = 4;
-    for (let i = 0; i < 100; i++) {
+    // Faster steering needs to begin at the open gap rather than before its concrete approach.
+    player.x = 2.9; player.s = 255; player.speed = 35; player.simulationTime = 4;
+    for (let i = 0; i < 100 && player.x > -3.5; i++) {
       player.step(STEP, { ...neutral(), steer: -1 }); traffic.step(STEP, player, player.simulationTime);
     }
     expect(player.x).toBeLessThan(-2.9); expect(player.damage).toBe(0); expect(player.exploded).toBe(false);

@@ -18,7 +18,7 @@ export function sweptHit(a: Pose, b: Pose, oldBox: HitBox, box: HitBox): boolean
   );
 }
 /** Wheel lock tapers progressively for small, controllable highway corrections. */
-export const steeringLimit = (speed: number, wheelbase = TUNE.wheelbase): number => Math.min(.5 / (1 + Math.abs(speed) / 12 + (speed / 35) ** 2), Math.atan(10.8 * wheelbase / Math.max(1, speed ** 2)));
+export const steeringLimit = (speed: number, wheelbase = TUNE.wheelbase, authority = TUNE.steerAuthority): number => Math.min(.5, authority * Math.min(.5 / (1 + Math.abs(speed) / 12 + (speed / 35) ** 2), Math.atan(10.8 * wheelbase / Math.max(1, speed ** 2))));
 /** Assisted bicycle handling, with a shared wet/dry traction budget and momentum heading. */
 export class Vehicle {
   constructor(readonly tuning: VehicleTuning = TUNE, readonly minimumS = -20) {}
@@ -103,14 +103,16 @@ export class Vehicle {
     this.hitCooldown = Math.max(0, this.hitCooldown - dt);
     const speed = this.speed, pace = Math.abs(speed), grip = (wet ? this.tuning.wetGrip : this.tuning.dryGrip) * 9.81;
     const steerInput = clamp(input.steer, -1, 1);
-    const breakaway = this.tuning.brakeDriftAssist && speed > 8 && Math.abs(steerInput) > .25 && (input.brake > .25 || input.handbrake);
+    const planted=this.tuning.plantedHandling;
+    if(planted)this.driftAmount=0;
+    const breakaway = !planted && this.tuning.brakeDriftAssist && speed > 8 && Math.abs(steerInput) > .25 && (input.brake > .25 || input.handbrake);
     if (breakaway && (this.driftAmount < .08 || input.handbrake && this.driftDirection*this.slipAngle<.015)) this.driftDirection = Math.sign(steerInput);
     const countersteering = this.driftAmount > .02 && this.driftDirection * steerInput < -.15;
     const handbrakeCounter=input.handbrake && countersteering && this.tuning.brakeDriftAssist;
     const driftTarget = breakaway && (!countersteering || input.handbrake) ? clamp((speed - 8) / 6, 0, 1) * (wet || input.handbrake ? 1 : .82) : 0;
     this.driftAmount = damp(this.driftAmount, driftTarget, driftTarget > this.driftAmount ? (input.handbrake ? 4 : 6) : !input.handbrake && !input.brake ? 6 : countersteering ? 2 : 2.4, dt);
     if (pace < 3) this.driftAmount = damp(this.driftAmount, 0, 12, dt);
-    const limit = Math.min(.5, steeringLimit(speed, this.tuning.wheelbase) * (1 + this.driftAmount * .85));
+    const limit = Math.min(.5, steeringLimit(speed, this.tuning.wheelbase, this.tuning.steerAuthority) * (1 + this.driftAmount * .85));
     let targetSteer = steerInput * limit * clamp(sensitivity, .5, 1.5);
     targetSteer = clamp(targetSteer, -limit, limit);
     const centering = Math.abs(targetSteer) < Math.abs(this.steering);
@@ -137,14 +139,14 @@ export class Vehicle {
       // Maintain ordinary low-speed response while reserving enough power to reach the selected top speeds.
       else drive = throttle * this.tuning.engineForce * (boostActive ? 2.5 : 1) * (1 - this.damage * this.tuning.damagePowerLoss) * (Math.max(.22, 1 - pace / this.tuning.driveFalloffSpeed) + (this.tuning === TUNE ? .18 * clamp((pace - 60) / 20, 0, 1) : 0));
     }
-    if (input.handbrake) { drive = -Math.sign(speed) * this.tuning.mass * grip * .36; braking = true; }
-    const plantedSteering = !input.brake && !input.handbrake && this.driftAmount < .05;
+    if (input.handbrake) { drive = -Math.sign(speed) * (planted ? this.tuning.brakeForce : this.tuning.mass * grip * .36); braking = true; }
+    const plantedSteering = planted || !input.brake && !input.handbrake && this.driftAmount < .05;
     // Reserve tire capacity as steering is requested, before the body has finished turning.
     const steeringDemand = Math.abs(speed * speed / this.tuning.wheelbase * Math.tan(this.steering));
     const reserve = plantedSteering ? Math.min(.7, steeringDemand / grip * .75) : 0;
     const cornerUse = clamp(Math.max(Math.abs(this.travelRate * speed) / grip, reserve), 0, .92);
     // Give the service brake stronger arcade stopping authority without changing steering or handbrake grip.
-    const brakeGrip = braking && !input.handbrake ? this.tuning.brakeGripMultiplier : 1;
+    const brakeGrip = braking && (planted || !input.handbrake) ? this.tuning.brakeGripMultiplier : 1;
     const traction = grip * Math.sqrt(1 - cornerUse ** 2) * (braking ? brakeGrip : .83);
     const resistance = Math.sign(speed) * (this.tuning.drag * speed ** 2 + this.tuning.rolling) / this.tuning.mass;
     const longitudinal = this.airborne ? 0 : clamp(drive / this.tuning.mass, -traction, traction);
@@ -159,7 +161,8 @@ export class Vehicle {
 
     const desiredRate = this.speed / this.tuning.wheelbase * Math.tan(this.steering);
     const longitudinalUse = clamp(Math.abs(longitudinal) / grip, 0, .98);
-    const lateralGrip = (this.airborne ? 0 : grip) * Math.sqrt(1 - longitudinalUse ** 2) * (input.handbrake ? handbrakeCounter ? .65 : .48 : 1) * (plantedSteering || handbrakeCounter ? this.tuning.cornerAssist : 1);
+    // Planted player handling retains turning grip under either brake.
+    const lateralGrip = planted ? (this.airborne ? 0 : grip) * this.tuning.cornerAssist : (this.airborne ? 0 : grip) * Math.sqrt(1 - longitudinalUse ** 2) * (input.handbrake ? handbrakeCounter ? .65 : .48 : 1) * (plantedSteering || handbrakeCounter ? this.tuning.cornerAssist : 1);
     const maxRate = lateralGrip / Math.max(2.5, Math.abs(this.speed));
     const cornerRate = clamp(desiredRate, -maxRate, maxRate);
     // Rear breakaway rotates the body independently of the centre-of-mass trajectory.
@@ -170,17 +173,20 @@ export class Vehicle {
     const slideRate = this.travelRate + clamp((desiredSlip - this.slipAngle) * (handbrakeCounter ? 6 : countersteering ? 7 : 4.5), -yawAuthority, yawAuthority);
     const recovering = !input.handbrake && !input.brake && this.driftAmount > .02;
     const targetRate = this.airborne ? 0 : recovering ? cornerRate + clamp(-this.slipAngle * 5, -.9, .9) : Math.abs(steerInput)<.02 ? cornerRate : cornerRate * (1 - this.driftAmount) + slideRate * this.driftAmount;
-    this.yawRate = damp(this.yawRate, targetRate, this.airborne ? 1.1 : handbrakeCounter ? 10 : countersteering ? 12 : this.driftAmount > .05 ? (input.handbrake ? 6 : 8) : 18, dt);
+    this.yawRate = damp(this.yawRate, targetRate, this.airborne ? 1.1 : handbrakeCounter ? 10 : countersteering ? 12 : this.driftAmount > .05 ? (input.handbrake ? 6 : 8) : planted ? 32 : 18, dt);
     if (pace < .25) this.yawRate = damp(this.yawRate, 0, 14, dt);
     this.yaw = clamp(this.yaw + (this.yawRate + this.spin) * dt, -1.2, 1.2);
     const headingError = this.slipAngle;
     const tracking = recovering ? (wet ? 10 : 14) : (input.handbrake ? 1.7 : this.driftAmount > .05 ? (wet ? 6.5 : 9.5) : (wet ? 15 : 18)) * (1 - this.driftAmount * .88);
     const requestedTurn=handbrakeCounter ? cornerRate*dt : headingError*(1-Math.exp(-dt*tracking));
     const travelTurn = clamp(requestedTurn, -maxRate * dt, maxRate * dt);
-    this.travelRate = travelTurn / dt; this.travelYaw += travelTurn;
+    if(planted && !this.airborne){
+      // Tires follow the body immediately: steering and braking never create a sideways slide.
+      this.travelRate=(this.yaw-this.travelYaw)/dt;this.travelYaw=this.yaw;
+    }else {this.travelRate = travelTurn / dt; this.travelYaw += travelTurn;}
     const demand = Math.abs(desiredRate * this.speed);
     const slipDemand = clamp((demand - lateralGrip) / 12 + Math.abs(headingError) * 2 + (input.handbrake && pace > 2 ? .55 : 0) + this.driftAmount * .65, 0, 1);
-    this.slip = damp(this.slip, slipDemand, 5, dt);
+    this.slip = planted ? 0 : damp(this.slip, slipDemand, 5, dt);
     this.lateral = Math.sin(this.travelYaw) * this.speed;
     this.x += this.lateral * dt; this.s = Math.max(this.minimumS, this.s + this.velocityS * dt);
     if(this.tuning===TUNE){

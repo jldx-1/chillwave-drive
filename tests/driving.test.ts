@@ -20,12 +20,12 @@ describe('driving dynamics', () => {
     expect(slow.x).toBeGreaterThan(6.5); const oldYaw = slow.yaw;
     run(slow, .1); expect(slow.yaw).toBeGreaterThan(oldYaw); expect(slow.steering).toBeGreaterThan(0);
   });
-  it('wet grip and handbraking increase slip; road bounds prevent escaping', () => {
+  it('stays planted in wet and dry turns and respects road bounds while braking', () => {
     const wet = new Vehicle(), dry = new Vehicle(); wet.speed = dry.speed = 60;
     run(wet, .4, { ...neutral(), steer: 1 }, true); run(dry, .4, { ...neutral(), steer: 1 }, false);
-    expect(wet.slip).toBeGreaterThan(dry.slip);
+    expect(wet.slip).toBe(0);expect(dry.slip).toBe(0);
     run(wet, 2, { ...neutral(), throttle: 1, steer: 1, handbrake: true });
-    expect(wet.slip).toBeGreaterThan(.2); expect(wet.x).toBeLessThanOrEqual(15.45);
+    expect(wet.slip).toBe(0);expect(wet.driftAmount).toBe(0); expect(wet.x).toBeLessThanOrEqual(15.45);
   });
   it('centers the wheels while preserving the chosen heading after steering is released', () => {
     for(const direction of [-1,1]){
